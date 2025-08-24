@@ -1,26 +1,19 @@
-import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 
-@Entity('mbs_items')
-export class MbsItem {
+export interface MbsItem {
   @ApiProperty({ description: 'MBS item code (Primary Key)', example: '23' })
-  @PrimaryColumn({ type: 'varchar', length: 50 })
   code: string;
 
   @ApiProperty({ description: 'Item title', example: 'Professional attendance by a general practitioner' })
-  @Column({ type: 'varchar', length: 500 })
   title: string;
 
   @ApiProperty({ description: 'Item description', example: 'Professional attendance by a general practitioner at consulting rooms' })
-  @Column({ type: 'text', name: 'desc' })
-  desc: string;
+  description: string;
 
   @ApiProperty({ description: 'Fee amount', example: 41.20 })
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
   fee: number;
 
   @ApiProperty({ description: 'Time threshold in minutes', example: 20, required: false })
-  @Column({ type: 'integer', nullable: true, name: 'time_threshold' })
   timeThreshold?: number;
 
   @ApiProperty({ 
@@ -28,7 +21,6 @@ export class MbsItem {
     example: { telehealth: true, after_hours: false },
     type: 'object'
   })
-  @Column({ type: 'jsonb' })
   flags: {
     telehealth?: boolean;
     after_hours?: boolean;
@@ -40,7 +32,6 @@ export class MbsItem {
     example: ['24', '25'],
     type: [String]
   })
-  @Column({ type: 'text', array: true, default: '{}', name: 'mutually_exclusive_with' })
   mutuallyExclusiveWith: string[];
 
   @ApiProperty({ 
@@ -48,14 +39,28 @@ export class MbsItem {
     example: ['MBS Guidelines 2023', 'Clinical Notes'],
     type: [String]
   })
-  @Column({ type: 'text', array: true, default: '{}' })
   references: string[];
 
   @ApiProperty({ description: 'Creation timestamp' })
-  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
   @ApiProperty({ description: 'Last update timestamp' })
-  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+}
+
+export interface MbsItemRow {
+  code: string;
+  title: string;
+  description: string;
+  fee: number;
+  time_threshold?: number;
+  flags: {
+    telehealth?: boolean;
+    after_hours?: boolean;
+    [key: string]: any;
+  };
+  mutually_exclusive_with: string[];
+  reference_materials: string[];
+  created_at: Date;
+  updated_at: Date;
 }

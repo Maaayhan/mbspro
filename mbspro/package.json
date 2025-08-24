@@ -8,12 +8,10 @@
     "build": "pnpm --recursive run build",
     "lint": "pnpm --recursive run lint",
     "test": "pnpm --recursive run test",
-    "db:up": "docker compose up -d",
-    "db:down": "docker compose down",
     "seed": "pnpm --filter=api run seed",
     "clean": "node scripts/clean.js",
     "fresh": "pnpm clean && pnpm install",
-    "reset": "pnpm clean && pnpm install && pnpm db:up && pnpm seed"
+    "reset": "pnpm clean && pnpm install && pnpm seed"
   },
   "devDependencies": {
     "typescript": "^5.3.3"

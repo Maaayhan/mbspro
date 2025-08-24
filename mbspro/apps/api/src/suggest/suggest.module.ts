@@ -1,13 +1,10 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { SuggestController } from './suggest.controller';
 import { SuggestService } from './suggest.service';
-import { MbsItem } from '../entities/mbs-item.entity';
+import { SupabaseService } from '../services/supabase.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([MbsItem])],
   controllers: [SuggestController],
-  providers: [SuggestService],
-  exports: [SuggestService],
+  providers: [SuggestService, SupabaseService],
 })
 export class SuggestModule {}
