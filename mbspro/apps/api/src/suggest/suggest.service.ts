@@ -1,56 +1,73 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SuggestRequestDto } from './dto/suggest-request.dto';
 import { SuggestResponseDto } from './dto/suggest-response.dto';
-import type { SuggestResponse } from '@mbspro/shared';
-import { SupabaseService } from '../services/supabase.service';
-import { MbsItem, MbsItemRow } from '../entities/mbs-item.entity';
+import type { SuggestResponse, SuggestCandidate } from '@mbspro/shared';
+import { SignalExtractorService } from './signal-extractor.service';
+import { RankerService } from './ranker.service';
+import { ExplainService } from './explain.service';
+import { LexicalRetrieverService } from './lexical-retriever.service';
 
 @Injectable()
 export class SuggestService {
   private readonly logger = new Logger(SuggestService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly signalExtractor: SignalExtractorService,
+    private readonly lexical: LexicalRetrieverService,
+    private readonly ranker: RankerService,
+    private readonly explainer: ExplainService,
+  ) {}
 
   async suggest(request: SuggestRequestDto): Promise<SuggestResponseDto> {
-    this.logger.log(`Processing suggestion request for note: "${request.note?.substring(0, 50)}..."`);
-    
-    try {
-      // Search for MBS items based on the note content using SupabaseService
-      const data = await this.supabaseService.searchMbsItems(request.note, 10);
+    const started = Date.now();
+    const note = request.note || '';
+    const topN = request.topN && request.topN > 0 ? request.topN : 5;
 
-      // Transform the data from database format to application format
-      const candidates = (data as MbsItemRow[] || []).map(this.transformRowToItem);
+    try {
+      const signalsInternal = this.signalExtractor.extract(note);
+      const topK = Math.max(30, topN * 10);
+      const rows = await this.lexical.retrieve(note, signalsInternal, topK);
+      // Adapt to ranker's expected shape by attaching sim as sim field
+      const rowsForRanker = rows.map((r) => ({
+        code: r.code,
+        title: r.title,
+        description: '',
+        fee: 0,
+        time_threshold: undefined,
+        flags: {},
+        mutually_exclusive_with: [],
+        reference_docs: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        sim: r.bm25,
+      } as any));
+
+      const ranked = this.ranker.rank({ rows: rowsForRanker, signals: signalsInternal, topN });
+      const explained = ranked.map((c) => this.explainer.explain(c));
 
       const response: SuggestResponse = {
-        candidates,
-        signals: undefined,
+        candidates: explained,
+        signals: {
+          duration: signalsInternal.duration ?? (Date.now() - started),
+          mode: signalsInternal.mode,
+          after_hours: signalsInternal.afterHours,
+          chronic: signalsInternal.chronic,
+        },
       };
 
-      this.logger.log(`Returning ${candidates.length} candidates from Supabase`);
-      
       return response;
     } catch (error) {
       this.logger.error('Error in suggest service:', error);
-      // Return empty response on error
+      const fallback: SuggestCandidate[] = [];
       return {
-        candidates: [],
-        signals: undefined,
+        candidates: fallback,
+        signals: {
+          duration: Date.now() - started,
+          mode: 'fast',
+          after_hours: false,
+          chronic: false,
+        },
       };
     }
-  }
-
-  private transformRowToItem(row: MbsItemRow): MbsItem {
-    return {
-      code: row.code,
-      title: row.title,
-      description: row.description,
-      fee: row.fee,
-      timeThreshold: row.time_threshold,
-      flags: row.flags,
-      mutuallyExclusiveWith: row.mutually_exclusive_with,
-      references: row.reference_materials,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-    };
   }
 }

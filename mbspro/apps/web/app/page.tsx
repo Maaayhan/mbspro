@@ -9,6 +9,9 @@ export default function HomePage() {
   const [response, setResponse] = useState<SuggestResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [status, setStatus] = useState<number | null>(null)
+  const [latencyMs, setLatencyMs] = useState<number | null>(null)
+  const [showJson, setShowJson] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -21,6 +24,8 @@ export default function HomePage() {
     setLoading(true)
     setError(null)
     setResponse(null)
+    setStatus(null)
+    setLatencyMs(null)
 
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000'
@@ -29,7 +34,8 @@ export default function HomePage() {
         topN: topN > 0 ? topN : undefined,
       }
 
-      const response = await fetch(`${apiBase}/api/suggest`, {
+      const started = performance.now()
+      const res = await fetch(`${apiBase}/api/suggest`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -37,14 +43,18 @@ export default function HomePage() {
         body: JSON.stringify(requestBody),
       })
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null)
+      setStatus(res.status)
+      const elapsed = performance.now() - started
+      setLatencyMs(Math.round(elapsed))
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null)
         throw new Error(
-          errorData?.message || `HTTP ${response.status}: ${response.statusText}`
+          errorData?.message || `HTTP ${res.status}: ${res.statusText}`
         )
       }
 
-      const data: SuggestResponse = await response.json()
+      const data: SuggestResponse = await res.json()
       setResponse(data)
     } catch (err) {
       console.error('Error calling /suggest:', err)
@@ -179,40 +189,100 @@ Example:
           <div className="card">
             <div className="mb-4">
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                API Response
+                Suggestions
               </h3>
               <div className="text-sm text-gray-600">
-                Showing results from: <code className="bg-gray-100 px-1 rounded">POST /api/suggest</code>
+                From <code className="bg-gray-100 px-1 rounded">POST /api/suggest</code>
               </div>
             </div>
 
-            {/* Pretty JSON Display */}
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 overflow-auto">
-              <pre className="text-sm text-gray-800 whitespace-pre-wrap">
-                {JSON.stringify(response, null, 2)}
-              </pre>
+            {/* Summary */}
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-sm mb-4">
+              <div>
+                <span className="font-medium text-gray-700">Candidates:</span>
+                <span className="ml-2 text-gray-900">{response.candidates?.length || 0}</span>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Signals:</span>
+                <span className="ml-2 text-gray-900">{response.signals ? 'Yes' : 'None'}</span>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">HTTP:</span>
+                <span className="ml-2 text-gray-900">{status ?? '-'}
+                </span>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Latency:</span>
+                <span className="ml-2 text-gray-900">{latencyMs != null ? `${latencyMs} ms` : '-'}</span>
+              </div>
             </div>
 
-            {/* Response Summary */}
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                <div>
-                  <span className="font-medium text-gray-700">Candidates:</span>
-                  <span className="ml-2 text-gray-900">
-                    {response.candidates?.length || 0}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-medium text-gray-700">Signals:</span>
-                  <span className="ml-2 text-gray-900">
-                    {response.signals ? 'Yes' : 'None'}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-medium text-gray-700">Status:</span>
-                  <span className="ml-2 text-green-600">Success</span>
-                </div>
+            {/* Empty state */}
+            {(!response.candidates || response.candidates.length === 0) && (
+              <div className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-6 text-center text-sm text-gray-600">
+                No suggestions were found. Try refining the note or increasing Top-N.
               </div>
+            )}
+
+            {/* Candidate cards */}
+            <div className="space-y-3">
+              {response.candidates?.map((c, idx) => (
+                <div key={`${c.code}-${idx}`} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="text-sm text-gray-500">#{idx + 1}</div>
+                      <div className="text-base font-semibold text-gray-900">
+                        {c.code} · {c.title}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs text-gray-500">Score</div>
+                      <div className="text-lg font-bold text-gray-900">{c.score?.toFixed(3)}</div>
+                    </div>
+                  </div>
+
+                  {c.short_explain && (
+                    <div className="mt-2 text-sm text-gray-700">
+                      {c.short_explain}
+                    </div>
+                  )}
+
+                  {Array.isArray(c.feature_hits) && c.feature_hits.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {c.feature_hits.map((f, i) => (
+                        <span key={`${f}-${i}`} className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                          {f}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {c.score_breakdown && (
+                    <div className="mt-3 text-xs text-gray-500">
+                      bm25: {typeof c.score_breakdown['bm25'] === 'number' ? c.score_breakdown['bm25'].toFixed(3) : c.score_breakdown['bm25'] as any}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Raw JSON toggle */}
+            <div className="mt-6">
+              <button
+                type="button"
+                onClick={() => setShowJson(!showJson)}
+                className="btn-secondary"
+                disabled={loading}
+              >
+                {showJson ? 'Hide raw JSON' : 'Show raw JSON'}
+              </button>
+              {showJson && (
+                <div className="mt-3 bg-gray-50 border border-gray-200 rounded-lg p-4 overflow-auto">
+                  <pre className="text-sm text-gray-800 whitespace-pre-wrap">
+                    {JSON.stringify(response, null, 2)}
+                  </pre>
+                </div>
+              )}
             </div>
           </div>
         </div>

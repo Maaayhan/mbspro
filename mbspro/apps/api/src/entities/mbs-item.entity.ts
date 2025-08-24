@@ -60,7 +60,7 @@ export interface MbsItemRow {
     [key: string]: any;
   };
   mutually_exclusive_with: string[];
-  reference_materials: string[];
+  reference_docs: string[];
   created_at: Date;
   updated_at: Date;
 }

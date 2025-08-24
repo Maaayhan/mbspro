@@ -7,7 +7,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/main.ts",
     "start": "node dist/main",
     "build": "nest build",
-    "test": "jest",
+    "test": "jest --coverage",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
@@ -22,6 +22,9 @@
     "@nestjs/swagger": "^7.1.0",
     "swagger-ui-express": "^5.0.0",
     "@supabase/supabase-js": "^2.38.0",
+    "@nestjs/typeorm": "^10.0.0",
+    "typeorm": "^0.3.17",
+    "pg": "^8.11.0",
     "class-validator": "^0.14.0",
     "class-transformer": "^0.5.1",
     "dotenv": "^16.3.0",
@@ -37,6 +40,7 @@
     "@types/jest": "^29.5.2",
     "@types/node": "^20.3.1",
     "@types/supertest": "^2.0.12",
+    "@types/pg": "^8.10.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
     "eslint": "^8.42.0",
@@ -68,6 +72,26 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "coverageThreshold": {
+      "global": {
+        "branches": 0,
+        "functions": 0,
+        "lines": 0,
+        "statements": 0
+      },
+      "./suggest/signal-extractor.service.ts": {
+        "branches": 0.7,
+        "functions": 0.7,
+        "lines": 0.7,
+        "statements": 0.7
+      },
+      "./suggest/ranker.service.ts": {
+        "branches": 0.7,
+        "functions": 0.7,
+        "lines": 0.7,
+        "statements": 0.7
+      }
+    }
   }
 }

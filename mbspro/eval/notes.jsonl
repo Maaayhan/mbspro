@@ -1,0 +1,13 @@
+{"note":"Video telehealth consult for GP review, 12 minutes","gold_codes":["23"]}
+{"note":"After-hours GP consultation due to acute cough, 30 minutes","gold_codes":["24"]}
+{"note":"Weekend general practice consult, patient discussed symptoms, 45 minutes","gold_codes":["25"]}
+{"note":"Home visit for elderly patient assessment, 40 minutes in-person","gold_codes":["36"]}
+{"note":"Emergency GP attendance for urgent chest pain, 60 minutes","gold_codes":["44"]}
+{"note":"Telehealth phone consult to review chronic back pain, 20 minutes","gold_codes":["23"]}
+{"note":"In-person GP review of chronic hypertension, 20 minutes","gold_codes":["23"]}
+{"note":"夜间门诊 急性加重, after-hours consultation 30 分钟","gold_codes":["24"]}
+{"note":"周末就诊 general practitioner weekend visit, 60 minutes","gold_codes":["25"]}
+{"note":"视频问诊 telehealth follow-up for medication review, 15 分钟","gold_codes":["23"]}
+{"note":"Home domiciliary visit to check wound care, 45 minutes","gold_codes":["36"]}
+{"note":"急诊就诊 emergency consultation due to severe headache, 60 minutes","gold_codes":["44"]}
+

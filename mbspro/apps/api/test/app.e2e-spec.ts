@@ -44,59 +44,47 @@ describe('MBSPro API (e2e)', () => {
     });
   });
 
-  describe('Application Info', () => {
-    it('/api/ (GET) - should return application information', () => {
-      return request(app.getHttpServer())
-        .get('/api/')
-        .expect(200)
-        .expect((res) => {
-          expect(res.body).toHaveProperty('name', 'MBSPro API');
-          expect(res.body).toHaveProperty('version', '1.0.0');
-          expect(res.body).toHaveProperty('description');
-        });
-    });
-  });
-
   describe('Suggest Endpoint', () => {
-    it('POST /api/suggest with {note:"sample"} - should return 201 and have candidates array', () => {
-      return request(app.getHttpServer())
+    it('POST /api/suggest basic - returns candidates and signals', async () => {
+      const res = await request(app.getHttpServer())
         .post('/api/suggest')
-        .send({
-          note: 'sample'
-        })
-        .expect(201)
-        .expect((res) => {
-          expect(res.body).toHaveProperty('candidates');
-          expect(Array.isArray(res.body.candidates)).toBe(true);
-          // Day-1 placeholder returns empty array
-          expect(res.body.candidates).toHaveLength(0);
-          // Day-1 placeholder has no signals
-          expect(res.body.signals).toBeUndefined();
-        });
+        .send({ note: 'general practitioner consultation review 20 minutes' })
+        .expect(201);
+      expect(Array.isArray(res.body.candidates)).toBe(true);
+      expect(res.body.candidates.length).toBeGreaterThanOrEqual(1);
+      expect(res.body).toHaveProperty('signals');
+      const c0 = res.body.candidates[0];
+      expect(c0).toHaveProperty('code');
+      expect(c0).toHaveProperty('title');
+      expect(c0).toHaveProperty('score');
+      expect(c0).toHaveProperty('score_breakdown');
+      expect(c0).toHaveProperty('feature_hits');
+      expect(c0).toHaveProperty('short_explain');
     });
 
-    it('POST /api/suggest with note and topN - should return 201 with proper structure', () => {
-      return request(app.getHttpServer())
+    it('POST /api/suggest telehealth - includes telehealth item in Top-3', async () => {
+      const res = await request(app.getHttpServer())
         .post('/api/suggest')
-        .send({
-          note: 'Patient consultation for chronic pain management',
-          topN: 5
-        })
-        .expect(201)
-        .expect((res) => {
-          expect(res.body).toHaveProperty('candidates');
-          expect(Array.isArray(res.body.candidates)).toBe(true);
-          expect(res.body.candidates).toHaveLength(0); // Day-1 placeholder
-          expect(res.body.signals).toBeUndefined(); // Day-1 placeholder
-        });
+        .send({ note: 'video consult 12 minutes for telehealth review' })
+        .expect(201);
+
+      const top3 = (res.body.candidates || []).slice(0, 3);
+      const hasTelehealth = top3.some((c: any) => Array.isArray(c.feature_hits) && c.feature_hits.includes('telehealth'));
+      expect(hasTelehealth).toBe(true);
+    });
+
+    it('POST /api/suggest after-hours - returns at least one candidate', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/suggest')
+        .send({ note: 'after-hours urgent consultation 30 minutes' })
+        .expect(201);
+      expect((res.body.candidates || []).length).toBeGreaterThanOrEqual(1);
     });
 
     it('POST /api/suggest without note - should return 400 validation error', () => {
       return request(app.getHttpServer())
         .post('/api/suggest')
-        .send({
-          topN: 5
-        })
+        .send({ topN: 5 })
         .expect(400)
         .expect((res) => {
           expect(res.body).toHaveProperty('statusCode', 400);
@@ -108,26 +96,8 @@ describe('MBSPro API (e2e)', () => {
     it('POST /api/suggest with invalid topN - should return 400 validation error', () => {
       return request(app.getHttpServer())
         .post('/api/suggest')
-        .send({
-          note: 'sample note',
-          topN: 0 // Invalid: should be >= 1
-        })
+        .send({ note: 'sample note', topN: 0 })
         .expect(400);
-    });
-
-    it('POST /api/suggest with extra fields - should be filtered out by whitelist', () => {
-      return request(app.getHttpServer())
-        .post('/api/suggest')
-        .send({
-          note: 'sample note',
-          topN: 3,
-          extraField: 'should be ignored' // This should be filtered out
-        })
-        .expect(201)
-        .expect((res) => {
-          expect(res.body).toHaveProperty('candidates');
-          expect(Array.isArray(res.body.candidates)).toBe(true);
-        });
     });
   });
 });

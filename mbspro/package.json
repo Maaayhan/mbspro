@@ -11,7 +11,9 @@
     "seed": "pnpm --filter=api run seed",
     "clean": "node scripts/clean.js",
     "fresh": "pnpm clean && pnpm install",
-    "reset": "pnpm clean && pnpm install && pnpm seed"
+    "reset": "pnpm clean && pnpm install && pnpm seed",
+    "eval": "node scripts/eval.js",
+    "check:day2": "pnpm --filter @mbspro/api test && pnpm eval"
   },
   "devDependencies": {
     "typescript": "^5.3.3"

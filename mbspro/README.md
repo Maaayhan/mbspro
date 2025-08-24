@@ -21,7 +21,9 @@ mbspro/
 ├── packages/
 │   └── shared/       # Shared utilities and types
 ├── supabase/
-│   └── schema.sql    # Database schema for Supabase
+│   ├── schema.sql                      # Database schema for Supabase
+│   └── migrations/
+│       └── 2025-01-01-extensions-and-indexes.sql  # Enable pg_trgm/unaccent and add indexes
 ├── package.json      # Root package.json with workspace scripts
 ├── pnpm-workspace.yaml
 └── README.md
@@ -56,10 +58,10 @@ Follow the detailed setup guide in [SUPABASE_SETUP.md](./SUPABASE_SETUP.md):
 ### 3. Copy Environment Files
 ```bash
 # Backend environment
-cp apps/api/env.example apps/api/.env
+yarn dlx shx cp apps/api/env.example apps/api/.env || cp apps/api/env.example apps/api/.env
 
 # Frontend environment  
-cp apps/web/env.local.example apps/web/.env.local
+yarn dlx shx cp apps/web/env.local.example apps/web/.env.local || cp apps/web/env.local.example apps/web/.env.local
 ```
 
 ### 4. Configure Supabase Credentials
@@ -74,12 +76,29 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 1. Go to your Supabase dashboard → SQL Editor
 2. Copy and run the contents of `supabase/schema.sql`
 
-### 6. Seed Database
+### 6. Apply Extensions & Indexes Migration (S3)
+Choose one of the following:
+
+- SQL Editor:
+  - Open Supabase → SQL Editor, paste `supabase/migrations/2025-01-01-extensions-and-indexes.sql`
+  - Run the script (enables `pg_trgm`, `unaccent`, creates trigram + FTS indexes)
+
+- Supabase CLI (optional):
+  - Install CLI: `npm i -g supabase`
+  - Login and link: `supabase login` → `supabase link --project-ref <ref>`
+  - Run: `supabase db query supabase/migrations/2025-01-01-extensions-and-indexes.sql`
+
+Verification: Use `EXPLAIN` on similarity or FTS queries to confirm index usage (no need to paste plans).
+
+### 7. Seed Database (Supabase)
 ```bash
+# Seed into your Supabase project (idempotent upsert)
 pnpm seed
+
+# Verify rows exist (>= 3) in Table Editor
 ```
 
-### 7. Start Development Servers
+### 8. Start Development Servers
 ```bash
 pnpm dev
 ```
@@ -88,6 +107,86 @@ pnpm dev
 - **Frontend**: http://localhost:3000
 - **Backend**: http://localhost:4000  
 - **API Docs**: http://localhost:4000/docs
+
+## Supabase Direct Postgres Connection (TypeORM)
+
+The backend can connect to Supabase Postgres directly via TypeORM using `DATABASE_URL`.
+
+- Get the connection string from: Supabase Dashboard → Project Settings → Database → Connection string → URI (node)
+- Example: `postgresql://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres?sslmode=require`
+- Set in `apps/api/.env`:
+```env
+DATABASE_URL=postgresql://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres?sslmode=require
+PGSSLMODE=require
+```
+- SSL: when `PGSSLMODE=require`, the API enables SSL with `rejectUnauthorized=false` for compatibility with Supabase managed certs.
+- Important: `DATABASE_URL` is server-side only. Never expose it to the frontend.
+- Region: the hostname `db.<project-ref>.supabase.co` is region-bound to your project; latency depends on selected region at project creation.
+
+## Supabase Usage Guide
+
+### Obtain DATABASE_URL
+
+1. Open Supabase Dashboard → Project → Settings → Database → "Connection string" → URI (Node).
+2. Copy the URI that includes `sslmode=require`.
+3. Paste into `apps/api/.env` as `DATABASE_URL=...` (server-side only).
+
+### Enable Extensions & Indexes (SQL Editor or CLI)
+
+- SQL Editor (recommended):
+  - Open Supabase → SQL Editor → paste `supabase/migrations/2025-01-01-extensions-and-indexes.sql` → Run.
+  - This enables `pg_trgm` and `unaccent` and creates trigram and FTS indexes.
+
+- Supabase CLI (optional):
+  - `npm i -g supabase`
+  - `supabase login` → `supabase link --project-ref <project-ref>`
+  - `supabase db query supabase/migrations/2025-01-01-extensions-and-indexes.sql`
+
+Verification: Use `EXPLAIN` on similarity or FTS queries in SQL Editor to confirm index usage (no need to paste plans).
+
+### Seed Against Supabase (Idempotent)
+
+1. Ensure schema is applied (run `supabase/schema.sql` in SQL Editor).
+2. Set `SUPABASE_URL` and a server key (`SUPABASE_SERVICE_ROLE_KEY` preferred) in `apps/api/.env`.
+3. Run: `pnpm seed`.
+   - The seed uses UPSERT on primary key `code`, so it is safe and idempotent.
+
+### Tuning Guide: Ranker Weights
+
+The linear fusion ranker computes `score = α * bm25 + β * featureBoost`.
+
+- Location: `apps/api/src/suggest/ranker.service.ts` (`DEFAULT_WEIGHTS`).
+- Weights:
+  - `alpha` (0–1): weight for lexical score (bm25-like similarity)
+  - `beta`  (0–1): weight for feature rules sum
+  - `w1`: telehealth match boost (signals.mode telehealth/video/phone + item.telehealth)
+  - `w2`: telehealth mismatch penalty (mode telehealth but item not telehealth)
+  - `w3`: after-hours match boost
+  - `w4`: duration ≥ threshold boost
+  - `w5`: duration < threshold penalty
+  - `w6`: chronic/care-plan context boost
+
+Tips:
+- Increase `alpha` to favor pure lexical similarity; increase `beta`/`w*` to emphasize domain rules.
+- For low recall in telehealth cases, increase `w1` or reduce `w2`.
+- For time-based gating, increase `w4` and `w5` magnitude.
+
+After changes, restart the API and re-run `pnpm eval` to check metrics.
+
+### Troubleshooting
+
+- Extension permissions:
+  - If `CREATE EXTENSION` fails, ensure you run in SQL Editor for your project (public schema). Use `CREATE EXTENSION IF NOT EXISTS pg_trgm;` and `unaccent;`.
+  - Some org policies can restrict extensions; check Settings → Database → Extensions.
+
+- SSL connection issues:
+  - Use `sslmode=require` in `DATABASE_URL`.
+  - Our TypeORM config sets `ssl: { rejectUnauthorized: false }` when `PGSSLMODE=require` (see `apps/api/src/config/database.config.ts`).
+
+- Zero hits / low recall:
+  - Increase retrieval Top-K in `LexicalRetrieverService` (e.g., 50–100) or widen synonyms.
+  - Expand synonyms in `packages/shared/src/index.ts` (SignalExtractor) and/or add keywords to items.
+  - Verify indexes/migration applied; without `pg_trgm`/FTS indexes, similarity may be slow or less effective.
 
 ## Available Scripts
 
@@ -102,7 +201,8 @@ pnpm dev
 
 ### Database Management
 ```bash
-# Seed the database
+# Apply schema and migrations via SQL Editor or Supabase CLI
+# Then seed the database (idempotent)
 pnpm seed
 
 # View Supabase dashboard
@@ -110,6 +210,23 @@ pnpm seed
 
 # Access database directly
 # Use Supabase SQL Editor or connect via connection string
+```
+
+### Deprecated: Local Postgres via Docker (Day-1)
+
+We previously used a local Postgres container for Day-1. The project now uses Supabase.
+
+- Keep historical commands for reference only:
+```bash
+# (Deprecated) Start database
+# pnpm db:up
+
+# (Deprecated) Stop database
+# pnpm db:down
+
+# (Deprecated) Logs / psql access
+# docker compose logs postgres
+# docker exec -it mbspro-postgres psql -U mbspro -d mbspro
 ```
 
 ## Day-1 Definition of Done ✅
@@ -145,75 +262,6 @@ All Day-1 requirements have been successfully implemented:
 - Single command setup: `pnpm i → configure Supabase → pnpm seed → pnpm dev`
 - Both frontend (port 3000) and backend (port 4000) start together
 - Hot reload enabled for development
-
-## Common Issues & Quick Fixes
-
-### 🔧 Port Already in Use
-```bash
-# Kill processes on ports 3000/4000
-npx kill-port 3000 4000
-# Or find and kill manually
-netstat -ano | findstr :3000
-taskkill /PID <PID> /F
-```
-
-### 🔧 Missing Environment Files
-```bash
-# Copy the templates
-cp apps/api/env.example apps/api/.env
-cp apps/web/env.local.example apps/web/.env.local
-```
-
-### 🔧 Supabase Connection Failed
-```bash
-# Check environment variables
-cat apps/api/.env
-
-# Verify Supabase project is active
-# Go to https://supabase.com/dashboard
-
-# Test connection with seed script
-pnpm seed
-```
-
-### 🔧 Database Schema Issues
-```bash
-# Run the schema in Supabase SQL Editor
-# Copy contents of supabase/schema.sql
-
-# Check if table exists
-# Go to Supabase Dashboard → Table Editor
-```
-
-### 🔧 Seed Script Fails
-```bash
-# Ensure Supabase credentials are correct
-cat apps/api/.env
-
-# Run seed with verbose output
-pnpm --filter @mbspro/api seed
-
-# Check Supabase logs in dashboard
-```
-
-### 🔧 TypeScript Errors
-```bash
-# Install dependencies if missing
-pnpm install
-
-# Check TypeScript compilation
-pnpm --filter @mbspro/api type-check
-pnpm --filter @mbspro/web type-check
-```
-
-### 🔧 Tests Failing
-```bash
-# Run tests with verbose output
-pnpm --filter @mbspro/api test --verbose
-
-# Run specific test file
-pnpm --filter @mbspro/api test health.controller.spec.ts
-```
 
 ## Technology Stack
 

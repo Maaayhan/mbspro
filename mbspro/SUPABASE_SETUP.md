@@ -95,12 +95,12 @@ The `mbs_items` table has the following structure:
 
 - `code`: Primary key, MBS item code (VARCHAR)
 - `title`: Item title (VARCHAR)
-- `desc`: Item description (TEXT)
+- `description`: Item description (TEXT)
 - `fee`: Fee amount (DECIMAL)
 - `time_threshold`: Time threshold in minutes (INTEGER, nullable)
 - `flags`: JSON object for special conditions (JSONB)
 - `mutually_exclusive_with`: Array of mutually exclusive item codes (TEXT[])
-- `reference_materials`: Array of reference materials (TEXT[])
+- `reference_docs`: Array of reference materials (TEXT[])
 - `created_at`: Creation timestamp (TIMESTAMP)
 - `updated_at`: Last update timestamp (TIMESTAMP)
 

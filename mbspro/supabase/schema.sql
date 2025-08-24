@@ -3,6 +3,7 @@
 
 -- Enable necessary extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- Create mbs_items table for Supabase
 CREATE TABLE IF NOT EXISTS mbs_items (
@@ -13,7 +14,7 @@ CREATE TABLE IF NOT EXISTS mbs_items (
   time_threshold INTEGER,
   flags JSONB NOT NULL DEFAULT '{}',
   mutually_exclusive_with TEXT[] DEFAULT '{}',
-  reference_materials TEXT[] DEFAULT '{}',
+  reference_docs TEXT[] DEFAULT '{}',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -23,6 +24,10 @@ CREATE INDEX IF NOT EXISTS idx_mbs_items_title ON mbs_items USING GIN (to_tsvect
 CREATE INDEX IF NOT EXISTS idx_mbs_items_description ON mbs_items USING GIN (to_tsvector('english', description));
 CREATE INDEX IF NOT EXISTS idx_mbs_items_fee ON mbs_items (fee);
 CREATE INDEX IF NOT EXISTS idx_mbs_items_flags ON mbs_items USING GIN (flags);
+-- Trigram indexes for similarity search
+CREATE INDEX IF NOT EXISTS trgm_mbs_items_title ON mbs_items USING GIN (title gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS trgm_mbs_items_description ON mbs_items USING GIN (description gin_trgm_ops);
+-- (unaccent/FTS removed; using trigram indexes for similarity search)
 
 -- Enable Row Level Security (RLS)
 ALTER TABLE mbs_items ENABLE ROW LEVEL SECURITY;
@@ -50,8 +55,53 @@ CREATE TRIGGER update_mbs_items_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+-- Similarity search function (returns rows with similarity score)
+CREATE OR REPLACE FUNCTION search_mbs_items(q TEXT, limit_n INT DEFAULT 20)
+RETURNS TABLE (
+  code VARCHAR,
+  title VARCHAR,
+  description TEXT,
+  fee DECIMAL,
+  time_threshold INTEGER,
+  flags JSONB,
+  mutually_exclusive_with TEXT[],
+  reference_docs TEXT[],
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ,
+  sim_title REAL,
+  sim_desc REAL,
+  sim REAL
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    m.code,
+    m.title,
+    m.description,
+    m.fee,
+    m.time_threshold,
+    m.flags,
+    m.mutually_exclusive_with,
+    m.reference_docs,
+    m.created_at,
+    m.updated_at,
+    similarity(m.title, q) AS sim_title,
+    similarity(m.description, q) AS sim_desc,
+    GREATEST(similarity(m.title, q), similarity(m.description, q)) AS sim
+  FROM mbs_items m
+  WHERE 
+    m.title ILIKE '%' || q || '%' OR
+    m.description ILIKE '%' || q || '%'
+  ORDER BY sim DESC
+  LIMIT limit_n;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+-- Expose as RPC for Supabase client
+GRANT EXECUTE ON FUNCTION search_mbs_items(TEXT, INT) TO anon, authenticated;
+
 -- Insert sample data
-INSERT INTO mbs_items (code, title, description, fee, time_threshold, flags, mutually_exclusive_with, reference_materials) VALUES
+INSERT INTO mbs_items (code, title, description, fee, time_threshold, flags, mutually_exclusive_with, reference_docs) VALUES
 ('23', 'Professional attendance by a general practitioner', 'Professional attendance by a general practitioner at consulting rooms', 41.20, 20, '{"telehealth": true, "after_hours": false}', ARRAY['24', '25'], ARRAY['MBS Guidelines 2023', 'Clinical Notes']),
 ('24', 'Professional attendance by a general practitioner - after hours', 'Professional attendance by a general practitioner at consulting rooms after hours', 82.40, 40, '{"telehealth": false, "after_hours": true}', ARRAY['23', '25'], ARRAY['MBS Guidelines 2023', 'After Hours Guidelines']),
 ('25', 'Professional attendance by a general practitioner - weekend', 'Professional attendance by a general practitioner at consulting rooms on weekend', 123.60, 60, '{"telehealth": false, "after_hours": true, "weekend": true}', ARRAY['23', '24'], ARRAY['MBS Guidelines 2023', 'Weekend Guidelines'])
@@ -67,7 +117,7 @@ SELECT
     time_threshold,
     flags,
     mutually_exclusive_with,
-    reference_materials,
+    reference_docs,
     created_at,
     updated_at
 FROM mbs_items
