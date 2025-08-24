@@ -1,0 +1,23 @@
+# Build output
+dist/
+
+# Environment files
+.env
+
+# Logs
+logs
+*.log
+
+# Coverage
+coverage/
+
+# TypeScript
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
