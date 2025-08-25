@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ['@mbspro/shared'],
+  output: 'standalone',
   typescript: {
     // Enable strict type checking
     tsconfigPath: './tsconfig.json',
