@@ -23,6 +23,7 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const sampleMbsItems = [
+  // 原有數據
   {
     code: '23',
     title: 'Professional attendance by a general practitioner',
@@ -52,6 +53,67 @@ const sampleMbsItems = [
     flags: { telehealth: false, after_hours: true, weekend: true },
     mutually_exclusive_with: ['23', '24'],
     reference_docs: ['MBS Guidelines 2023', 'Weekend Guidelines']
+  },
+  // 新增測試數據 - 各種醫療服務
+  {
+    code: '3',
+    title: 'Professional attendance by a specialist physician',
+    description: 'Professional attendance by a specialist physician in consulting rooms',
+    fee: 156.80,
+    time_threshold: 45,
+    flags: { telehealth: true, specialist: true, urgent: false },
+    mutually_exclusive_with: ['4', '5'],
+    reference_docs: ['Specialist Guidelines 2023', 'Consultation Standards']
+  },
+  {
+    code: '36',
+    title: 'General practitioner consultation - urgent after hours',
+    description: 'Urgent professional attendance by a general practitioner after hours for acute conditions',
+    fee: 205.60,
+    time_threshold: 60,
+    flags: { telehealth: true, after_hours: true, urgent: true },
+    mutually_exclusive_with: ['23', '24', '25'],
+    reference_docs: ['Urgent Care Guidelines', 'Emergency Protocols']
+  },
+  {
+    code: '721',
+    title: 'Child health check - 4 year old',
+    description: 'Health assessment for children aged 4 years including developmental screening',
+    fee: 89.95,
+    time_threshold: 30,
+    flags: { pediatric: true, preventive: true, telehealth: false },
+    mutually_exclusive_with: [],
+    reference_docs: ['Pediatric Guidelines 2023', 'Child Health Schedule']
+  },
+  {
+    code: '2713',
+    title: 'Mental health consultation - psychologist',
+    description: 'Professional attendance by a registered psychologist for mental health assessment',
+    fee: 134.20,
+    time_threshold: 50,
+    flags: { mental_health: true, allied_health: true, telehealth: true },
+    mutually_exclusive_with: [],
+    reference_docs: ['Mental Health Guidelines', 'Psychology Board Standards']
+  },
+  {
+    code: '10990',
+    title: 'COVID-19 vaccination',
+    description: 'Administration of COVID-19 vaccine including pre-vaccination assessment',
+    fee: 0.00,
+    time_threshold: 15,
+    flags: { vaccination: true, preventive: true, bulk_billed: true },
+    mutually_exclusive_with: [],
+    reference_docs: ['COVID-19 Guidelines', 'Vaccine Protocols']
+  },
+  {
+    code: '735',
+    title: 'Home visit - general practitioner',
+    description: 'Professional attendance by a general practitioner at the patient\'s place of residence',
+    fee: 102.30,
+    time_threshold: 40,
+    flags: { home_visit: true, mobility_impaired: true, telehealth: false },
+    mutually_exclusive_with: ['23', '24', '25'],
+    reference_docs: ['Home Visit Guidelines', 'Domiciliary Care Standards']
   }
 ];
 

@@ -48,12 +48,12 @@ mbspro/
 pnpm i
 ```
 
-### 2. Set Up Supabase
+### 2. Set Up Supabase (Required)
 Follow the detailed setup guide in [SUPABASE_SETUP.md](./SUPABASE_SETUP.md):
 
 1. Create a Supabase project at [supabase.com](https://supabase.com)
-2. Get your project URL and API keys
-3. Copy environment files and configure credentials
+2. Get your project URL, anon key, and service role key
+3. Apply schema: open `supabase/schema.sql` in Supabase SQL Editor and run
 
 ### 3. Copy Environment Files
 ```bash
@@ -70,11 +70,15 @@ Edit `apps/api/.env` with your Supabase credentials:
 SUPABASE_URL=https://your-project-id.supabase.co
 SUPABASE_ANON_KEY=your_anon_key_here
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
+# Direct Postgres (server only)
+DATABASE_URL=postgresql://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres?sslmode=require
+PGSSLMODE=require
 ```
 
-### 5. Set Up Database Schema
-1. Go to your Supabase dashboard → SQL Editor
-2. Copy and run the contents of `supabase/schema.sql`
+### 5. Seed Database (Supabase)
+```bash
+pnpm --filter @mbspro/api seed
+```
 
 ### 6. Apply Extensions & Indexes Migration (S3)
 Choose one of the following:
@@ -90,12 +94,10 @@ Choose one of the following:
 
 Verification: Use `EXPLAIN` on similarity or FTS queries to confirm index usage (no need to paste plans).
 
-### 7. Seed Database (Supabase)
+### 7. Verify Connection
 ```bash
-# Seed into your Supabase project (idempotent upsert)
-pnpm seed
-
-# Verify rows exist (>= 3) in Table Editor
+pnpm --filter @mbspro/api test:connection  # env + Supabase client check
+pnpm --filter @mbspro/api test:examples    # example queries against mbs_items
 ```
 
 ### 8. Start Development Servers
@@ -108,20 +110,11 @@ pnpm dev
 - **Backend**: http://localhost:4000  
 - **API Docs**: http://localhost:4000/docs
 
-## Supabase Direct Postgres Connection (TypeORM)
+## Supabase Connectivity Notes
 
-The backend can connect to Supabase Postgres directly via TypeORM using `DATABASE_URL`.
-
-- Get the connection string from: Supabase Dashboard → Project Settings → Database → Connection string → URI (node)
-- Example: `postgresql://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres?sslmode=require`
-- Set in `apps/api/.env`:
-```env
-DATABASE_URL=postgresql://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres?sslmode=require
-PGSSLMODE=require
-```
-- SSL: when `PGSSLMODE=require`, the API enables SSL with `rejectUnauthorized=false` for compatibility with Supabase managed certs.
-- Important: `DATABASE_URL` is server-side only. Never expose it to the frontend.
-- Region: the hostname `db.<project-ref>.supabase.co` is region-bound to your project; latency depends on selected region at project creation.
+- The backend uses the Supabase JavaScript client for data access.
+- `DATABASE_URL` is optional for tooling/tests and must include `sslmode=require`.
+- Never expose server-side keys or `DATABASE_URL` to the frontend.
 
 ## Supabase Usage Guide
 

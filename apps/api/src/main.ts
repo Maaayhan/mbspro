@@ -3,6 +3,9 @@ import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import * as dotenv from 'dotenv';
+import 'dotenv/config';
+console.log('[DB URL USED BY APP]', process.env.DATABASE_URL);
+
 
 // Load environment variables
 dotenv.config();
