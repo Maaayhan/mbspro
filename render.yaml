@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: mbspro-frontend
+    env: node
+    plan: free
+    buildCommand: ./build.sh
+    startCommand: cd apps/web && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_BASE
+        value: https://bedrock-rag-api.onrender.com
+    healthCheckPath: /
+    region: oregon
