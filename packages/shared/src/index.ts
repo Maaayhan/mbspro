@@ -19,6 +19,26 @@ export interface SuggestCandidate {
   short_explain?: string;
 }
 
+// RAG API types
+export interface RagRequest {
+  query: string;
+  top?: number;
+}
+
+export interface RagResult {
+  itemNum?: string;
+  itemNums?: string[];
+  title: string;
+  match_reason: string;
+  match_score: number;
+  fee: string;
+  benefit: string;
+}
+
+export interface RagResponse {
+  results: RagResult[];
+}
+
 export interface Signals {
   duration: number;
   mode: string;
