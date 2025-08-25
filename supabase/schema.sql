@@ -72,7 +72,12 @@ RETURNS TABLE (
   sim_desc REAL,
   sim REAL
 ) AS $$
+DECLARE
+  tokens TEXT[];
 BEGIN
+  -- Split query into lowercased tokens; collapse multiple spaces
+  tokens := string_to_array(regexp_replace(lower(q), '\s+', ' ', 'g'), ' ');
+
   RETURN QUERY
   SELECT 
     m.code,
@@ -90,8 +95,12 @@ BEGIN
     GREATEST(similarity(m.title, q), similarity(m.description, q)) AS sim
   FROM mbs_items m
   WHERE 
-    m.title ILIKE '%' || q || '%' OR
-    m.description ILIKE '%' || q || '%'
+    -- Match if ANY token appears in title or description
+    EXISTS (
+      SELECT 1
+      FROM unnest(tokens) t
+      WHERE t <> '' AND (m.title ILIKE '%' || t || '%' OR m.description ILIKE '%' || t || '%')
+    )
   ORDER BY sim DESC
   LIMIT limit_n;
 END;
