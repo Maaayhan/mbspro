@@ -1,7 +1,33 @@
 'use client'
 
 import { useState } from 'react'
-import type { SuggestRequest, SuggestResponse } from '@mbspro/shared'
+import type { SuggestRequest, SuggestResponse, RagRequest, RagResponse, RagResult, SuggestCandidate } from '@mbspro/shared'
+
+// Convert RAG API response to our internal format
+const convertRagToSuggest = (ragResponse: RagResponse): SuggestResponse => {
+  const candidates: SuggestCandidate[] = ragResponse.results.map((result: RagResult) => {
+    // Handle both single itemNum and multiple itemNums
+    const code = result.itemNum || (result.itemNums ? result.itemNums.join(', ') : 'Unknown');
+    
+    return {
+      code,
+      title: result.title,
+      score: result.match_score,
+      short_explain: result.match_reason,
+      feature_hits: [`Fee: $${result.fee}`, `Benefit: $${result.benefit}`]
+    };
+  });
+
+  return {
+    candidates,
+    signals: {
+      duration: 0,
+      mode: 'rag',
+      after_hours: false,
+      chronic: false
+    }
+  };
+};
 
 export default function HomePage() {
   const [note, setNote] = useState('')
@@ -28,14 +54,15 @@ export default function HomePage() {
     setLatencyMs(null)
 
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000'
-      const requestBody: SuggestRequest = {
-        note: note.trim(),
-        topN: topN > 0 ? topN : undefined,
+      // Call external RAG API
+      const ragApiUrl = 'https://bedrock-rag-api.onrender.com/rag/query'
+      const requestBody: RagRequest = {
+        query: note.trim(),
+        top: topN > 0 ? topN : 5,
       }
 
       const started = performance.now()
-      const res = await fetch(`${apiBase}/api/suggest`, {
+      const res = await fetch(ragApiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -54,8 +81,10 @@ export default function HomePage() {
         )
       }
 
-      const data: SuggestResponse = await res.json()
-      setResponse(data)
+      const ragData: RagResponse = await res.json()
+      // Convert RAG response to our internal format
+      const convertedData = convertRagToSuggest(ragData)
+      setResponse(convertedData)
     } catch (err) {
       console.error('Error calling /suggest:', err)
       setError(err instanceof Error ? err.message : 'Failed to get suggestions')
@@ -123,9 +152,10 @@ Example:
                 onChange={(e) => setTopN(parseInt(e.target.value))}
                 disabled={loading}
               >
+                <option value={1}>1 suggestions</option>
                 <option value={3}>3 suggestions</option>
                 <option value={5}>5 suggestions</option>
-                <option value={10}>10 suggestions</option>
+                {/* <option value={10}>10 suggestions</option> */}
               </select>
             </div>
 
@@ -192,7 +222,7 @@ Example:
                 Suggestions
               </h3>
               <div className="text-sm text-gray-600">
-                From <code className="bg-gray-100 px-1 rounded">POST /api/suggest</code>
+                From <code className="bg-gray-100 px-1 rounded">POST /rag/query</code> 
               </div>
             </div>
 
@@ -298,12 +328,13 @@ Example:
               </svg>
             </div>
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-blue-800">
-                Day-1 Prototype Information
+              <h3 className="text-sm font-medium text-green-800">
+                RAG Integration Active
               </h3>
-              <div className="mt-1 text-sm text-blue-700">
-                This is a minimal working prototype. The suggestion endpoint currently returns an empty candidates array 
-                as a placeholder. Future iterations will implement the actual AI-powered suggestion logic.
+              <div className="mt-1 text-sm text-green-700">
+                This application is now powered by an external RAG (Retrieval-Augmented Generation) API that provides 
+                real-time MBS item suggestions based on clinical scenarios. The system retrieves relevant information 
+                and generates accurate recommendations with match scores and explanations.
               </div>
             </div>
           </div>
