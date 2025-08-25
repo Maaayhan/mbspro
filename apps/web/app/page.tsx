@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { SuggestRequest, SuggestResponse, RagRequest, RagResponse, RagResult, SuggestCandidate } from '../lib/types'
 
 // Convert RAG API response to our internal format
@@ -30,6 +30,7 @@ const convertRagToSuggest = (ragResponse: RagResponse): SuggestResponse => {
 };
 
 export default function HomePage() {
+  const [mounted, setMounted] = useState(false)
   const [note, setNote] = useState('')
   const [topN, setTopN] = useState<number>(5)
   const [response, setResponse] = useState<SuggestResponse | null>(null)
@@ -38,6 +39,18 @@ export default function HomePage() {
   const [status, setStatus] = useState<number | null>(null)
   const [latencyMs, setLatencyMs] = useState<number | null>(null)
   const [showJson, setShowJson] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -98,127 +111,118 @@ export default function HomePage() {
     setTopN(5)
     setResponse(null)
     setError(null)
+    setStatus(null)
+    setLatencyMs(null)
   }
 
   return (
     <div className="space-y-8">
-      {/* Header Section */}
-      <div className="text-center">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">
+      {/* Form Section */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">
           MBS Item Suggestions
         </h2>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-          Enter your clinical notes or SOAP documentation to receive AI-powered MBS item suggestions
-        </p>
-      </div>
-
-      {/* Input Form */}
-      <div className="card max-w-4xl mx-auto">
+        
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="clinical-note" className="form-label">
-              Clinical Notes / SOAP Documentation
+            <label htmlFor="note" className="block text-sm font-medium text-gray-700 mb-2">
+              Clinical Note
             </label>
             <textarea
-              id="clinical-note"
-              rows={8}
-              className="form-textarea"
-              placeholder="Enter your clinical notes here... 
-
-Example:
-- Patient presents with chronic lower back pain
-- Duration: 6 months, worsening over past 2 weeks  
-- Physical examination shows limited range of motion
-- Discussed treatment options and pain management strategies
-- Prescribed physiotherapy and reviewed in 2 weeks"
+              id="note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
+              placeholder="Enter clinical scenario or consultation notes here..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              rows={6}
               disabled={loading}
             />
-            <div className="mt-1 text-sm text-gray-500">
-              {note.length} characters
+            <div className="mt-2 text-sm text-gray-500">
+              Example: "30 minute telehealth consultation for chronic diabetes management and medication review"
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-end sm:space-x-4 space-y-4 sm:space-y-0">
+          <div className="flex flex-col sm:flex-row sm:items-end space-y-4 sm:space-y-0 sm:space-x-4">
             <div className="flex-1">
-              <label htmlFor="top-n" className="form-label">
-                Maximum Suggestions
+              <label htmlFor="topN" className="block text-sm font-medium text-gray-700 mb-2">
+                Number of Suggestions
               </label>
               <select
-                id="top-n"
-                className="form-textarea"
+                id="topN"
                 value={topN}
                 onChange={(e) => setTopN(parseInt(e.target.value))}
                 disabled={loading}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value={1}>1 suggestions</option>
+                <option value={1}>1 suggestion</option>
                 <option value={3}>3 suggestions</option>
                 <option value={5}>5 suggestions</option>
-                {/* <option value={10}>10 suggestions</option> */}
               </select>
             </div>
 
             <div className="flex space-x-3">
               <button
+                type="submit"
+                disabled={loading || !note.trim()}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Processing...' : 'Get Suggestions'}
+              </button>
+              
+              <button
                 type="button"
                 onClick={clearForm}
-                className="btn-secondary"
                 disabled={loading}
+                className="bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 text-white font-medium py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:cursor-not-allowed"
               >
                 Clear
-              </button>
-              <button
-                type="submit"
-                className="btn-primary"
-                disabled={loading || !note.trim()}
-              >
-                {loading ? (
-                  <span className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Getting Suggestions...
-                  </span>
-                ) : (
-                  'Get Suggestions'
-                )}
               </button>
             </div>
           </div>
         </form>
       </div>
 
-      {/* Error State */}
-      {error && (
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">
-                  Error
-                </h3>
-                <div className="mt-1 text-sm text-red-700">
-                  {error}
-                </div>
-              </div>
+      {/* Status Section */}
+      {(status !== null || latencyMs !== null) && (
+        <div className="bg-gray-50 rounded-lg p-4">
+          <div className="flex items-center justify-between text-sm text-gray-600">
+            <div className="flex items-center space-x-4">
+              {status !== null && (
+                <span className={`font-medium ${status === 200 || status === 201 ? 'text-green-600' : 'text-red-600'}`}>
+                  Status: {status}
+                </span>
+              )}
+              {latencyMs !== null && (
+                <span>Response time: {latencyMs}ms</span>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Results Panel */}
+      {/* Error Section */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">Error</h3>
+              <div className="mt-1 text-sm text-red-700">{error}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Results Section */}
       {response && (
-        <div className="max-w-4xl mx-auto">
-          <div className="card">
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">
                 Suggestions
               </h3>
               <div className="text-sm text-gray-600">
@@ -226,116 +230,83 @@ Example:
               </div>
             </div>
 
-            {/* Summary */}
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-sm mb-4">
-              <div>
-                <span className="font-medium text-gray-700">Candidates:</span>
-                <span className="ml-2 text-gray-900">{response.candidates?.length || 0}</span>
-              </div>
-              <div>
-                <span className="font-medium text-gray-700">Signals:</span>
-                <span className="ml-2 text-gray-900">{response.signals ? 'Yes' : 'None'}</span>
-              </div>
-              <div>
-                <span className="font-medium text-gray-700">HTTP:</span>
-                <span className="ml-2 text-gray-900">{status ?? '-'}
-                </span>
-              </div>
-              <div>
-                <span className="font-medium text-gray-700">Latency:</span>
-                <span className="ml-2 text-gray-900">{latencyMs != null ? `${latencyMs} ms` : '-'}</span>
-              </div>
-            </div>
+            <button
+              onClick={() => setShowJson(!showJson)}
+              className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded"
+            >
+              {showJson ? 'Hide JSON' : 'Show JSON'}
+            </button>
+          </div>
 
-            {/* Empty state */}
-            {(!response.candidates || response.candidates.length === 0) && (
-              <div className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-6 text-center text-sm text-gray-600">
-                No suggestions were found. Try refining the note or increasing Top-N.
-              </div>
-            )}
-
-            {/* Candidate cards */}
-            <div className="space-y-3">
-              {response.candidates?.map((c, idx) => (
-                <div key={`${c.code}-${idx}`} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="text-sm text-gray-500">#{idx + 1}</div>
-                      <div className="text-base font-semibold text-gray-900">
-                        {c.code} · {c.title}
+          {showJson ? (
+            <pre className="bg-gray-50 p-4 rounded-md overflow-auto text-sm">
+              {JSON.stringify(response, null, 2)}
+            </pre>
+          ) : (
+            <div className="space-y-4">
+              {response.candidates.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No suggestions found for this query.</p>
+                </div>
+              ) : (
+                response.candidates.map((candidate, index) => (
+                  <div key={index} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <span className="font-semibold text-blue-600">
+                            {candidate.code}
+                          </span>
+                          <span className="text-sm bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+                            Score: {candidate.score.toFixed(3)}
+                          </span>
+                        </div>
+                        <h4 className="font-medium text-gray-900 mb-2">
+                          {candidate.title}
+                        </h4>
+                        {candidate.short_explain && (
+                          <p className="text-sm text-gray-600 mb-2">
+                            {candidate.short_explain}
+                          </p>
+                        )}
+                        {candidate.feature_hits && candidate.feature_hits.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {candidate.feature_hits.map((hit, hitIndex) => (
+                              <span
+                                key={hitIndex}
+                                className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded"
+                              >
+                                {hit}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-xs text-gray-500">Score</div>
-                      <div className="text-lg font-bold text-gray-900">{c.score?.toFixed(3)}</div>
-                    </div>
                   </div>
-
-                  {c.short_explain && (
-                    <div className="mt-2 text-sm text-gray-700">
-                      {c.short_explain}
-                    </div>
-                  )}
-
-                  {Array.isArray(c.feature_hits) && c.feature_hits.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {c.feature_hits.map((f, i) => (
-                        <span key={`${f}-${i}`} className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
-                          {f}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {c.score_breakdown && (
-                    <div className="mt-3 text-xs text-gray-500">
-                      bm25: {typeof c.score_breakdown['bm25'] === 'number' ? c.score_breakdown['bm25'].toFixed(3) : c.score_breakdown['bm25'] as any}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Raw JSON toggle */}
-            <div className="mt-6">
-              <button
-                type="button"
-                onClick={() => setShowJson(!showJson)}
-                className="btn-secondary"
-                disabled={loading}
-              >
-                {showJson ? 'Hide raw JSON' : 'Show raw JSON'}
-              </button>
-              {showJson && (
-                <div className="mt-3 bg-gray-50 border border-gray-200 rounded-lg p-4 overflow-auto">
-                  <pre className="text-sm text-gray-800 whitespace-pre-wrap">
-                    {JSON.stringify(response, null, 2)}
-                  </pre>
-                </div>
+                ))
               )}
             </div>
-          </div>
+          )}
         </div>
       )}
 
-      {/* Day-1 Info */}
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-green-800">
-                RAG Integration Active
-              </h3>
-              <div className="mt-1 text-sm text-green-700">
-                This application is now powered by an external RAG (Retrieval-Augmented Generation) API that provides 
-                real-time MBS item suggestions based on clinical scenarios. The system retrieves relevant information 
-                and generates accurate recommendations with match scores and explanations.
-              </div>
+      {/* Info Section */}
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div className="ml-3">
+            <h3 className="text-sm font-medium text-green-800">
+              RAG Integration Active
+            </h3>
+            <div className="mt-1 text-sm text-green-700">
+              This application is now powered by an external RAG (Retrieval-Augmented Generation) API that provides
+              real-time MBS item suggestions based on clinical scenarios. The system retrieves relevant information
+              and generates accurate recommendations with match scores and explanations.
             </div>
           </div>
         </div>
