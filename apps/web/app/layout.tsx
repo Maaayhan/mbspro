@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'MBSPro - Medical Billing Suggestions',
   description: 'AI-powered MBS item suggestions for medical professionals',

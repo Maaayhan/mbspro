@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react'
 import type { SuggestRequest, SuggestResponse, RagRequest, RagResponse, RagResult, SuggestCandidate } from '../lib/types'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 // Convert RAG API response to our internal format
 const convertRagToSuggest = (ragResponse: RagResponse): SuggestResponse => {
   const candidates: SuggestCandidate[] = ragResponse.results.map((result: RagResult) => {

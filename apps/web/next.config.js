@@ -9,9 +9,13 @@ const nextConfig = {
     // Run ESLint during builds
     ignoreDuringBuilds: true,
   },
-  // Disable static optimization to avoid prerendering issues
+  // Completely disable static generation
   trailingSlash: false,
   generateEtags: false,
+  // Disable image optimization
+  images: {
+    unoptimized: true
+  }
 }
 
 module.exports = nextConfig
