@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { SuggestRequest, SuggestResponse, RagRequest, RagResponse, RagResult, SuggestCandidate } from '@mbspro/shared'
+import type { SuggestRequest, SuggestResponse, RagRequest, RagResponse, RagResult, SuggestCandidate } from '../lib/types'
 
 // Convert RAG API response to our internal format
 const convertRagToSuggest = (ragResponse: RagResponse): SuggestResponse => {
