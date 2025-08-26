@@ -16,6 +16,7 @@
     "check:day2": "pnpm --filter @mbspro/api test && pnpm eval"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "typescript": "^5.3.3"
   },
   "engines": {
