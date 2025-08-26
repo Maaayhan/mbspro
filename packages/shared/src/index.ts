@@ -17,6 +17,9 @@ export interface SuggestCandidate {
   score_breakdown?: Record<string, number>;
   feature_hits?: string[];
   short_explain?: string;
+  // Rules engine outputs
+  rule_results?: RuleResult[];
+  compliance?: 'green' | 'amber' | 'red';
 }
 
 // RAG API types
