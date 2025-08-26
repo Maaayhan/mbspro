@@ -9,6 +9,8 @@
 
 import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
+import * as fs from 'fs';
+import * as path from 'path';
 
 dotenv.config();
 
@@ -22,100 +24,48 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-const sampleMbsItems = [
-  // 原有數據
-  {
-    code: '23',
-    title: 'Professional attendance by a general practitioner',
-    description: 'Professional attendance by a general practitioner at consulting rooms',
-    fee: 41.20,
-    time_threshold: 20,
-    flags: { telehealth: true, after_hours: false },
-    mutually_exclusive_with: ['24', '25'],
-    reference_docs: ['MBS Guidelines 2023', 'Clinical Notes']
-  },
-  {
-    code: '24',
-    title: 'Professional attendance by a general practitioner - after hours',
-    description: 'Professional attendance by a general practitioner at consulting rooms after hours',
-    fee: 82.40,
-    time_threshold: 40,
-    flags: { telehealth: false, after_hours: true },
-    mutually_exclusive_with: ['23', '25'],
-    reference_docs: ['MBS Guidelines 2023', 'After Hours Guidelines']
-  },
-  {
-    code: '25',
-    title: 'Professional attendance by a general practitioner - weekend',
-    description: 'Professional attendance by a general practitioner at consulting rooms on weekend',
-    fee: 123.60,
-    time_threshold: 60,
-    flags: { telehealth: false, after_hours: true, weekend: true },
-    mutually_exclusive_with: ['23', '24'],
-    reference_docs: ['MBS Guidelines 2023', 'Weekend Guidelines']
-  },
-  // 新增測試數據 - 各種醫療服務
-  {
-    code: '3',
-    title: 'Professional attendance by a specialist physician',
-    description: 'Professional attendance by a specialist physician in consulting rooms',
-    fee: 156.80,
-    time_threshold: 45,
-    flags: { telehealth: true, specialist: true, urgent: false },
-    mutually_exclusive_with: ['4', '5'],
-    reference_docs: ['Specialist Guidelines 2023', 'Consultation Standards']
-  },
-  {
-    code: '36',
-    title: 'General practitioner consultation - urgent after hours',
-    description: 'Urgent professional attendance by a general practitioner after hours for acute conditions',
-    fee: 205.60,
-    time_threshold: 60,
-    flags: { telehealth: true, after_hours: true, urgent: true },
-    mutually_exclusive_with: ['23', '24', '25'],
-    reference_docs: ['Urgent Care Guidelines', 'Emergency Protocols']
-  },
-  {
-    code: '721',
-    title: 'Child health check - 4 year old',
-    description: 'Health assessment for children aged 4 years including developmental screening',
-    fee: 89.95,
-    time_threshold: 30,
-    flags: { pediatric: true, preventive: true, telehealth: false },
-    mutually_exclusive_with: [],
-    reference_docs: ['Pediatric Guidelines 2023', 'Child Health Schedule']
-  },
-  {
-    code: '2713',
-    title: 'Mental health consultation - psychologist',
-    description: 'Professional attendance by a registered psychologist for mental health assessment',
-    fee: 134.20,
-    time_threshold: 50,
-    flags: { mental_health: true, allied_health: true, telehealth: true },
-    mutually_exclusive_with: [],
-    reference_docs: ['Mental Health Guidelines', 'Psychology Board Standards']
-  },
-  {
-    code: '10990',
-    title: 'COVID-19 vaccination',
-    description: 'Administration of COVID-19 vaccine including pre-vaccination assessment',
-    fee: 0.00,
-    time_threshold: 15,
-    flags: { vaccination: true, preventive: true, bulk_billed: true },
-    mutually_exclusive_with: [],
-    reference_docs: ['COVID-19 Guidelines', 'Vaccine Protocols']
-  },
-  {
-    code: '735',
-    title: 'Home visit - general practitioner',
-    description: 'Professional attendance by a general practitioner at the patient\'s place of residence',
-    fee: 102.30,
-    time_threshold: 40,
-    flags: { home_visit: true, mobility_impaired: true, telehealth: false },
-    mutually_exclusive_with: ['23', '24', '25'],
-    reference_docs: ['Home Visit Guidelines', 'Domiciliary Care Standards']
+// Resolve and load items from unified JSON under data/mbs_seed.json
+function resolveSeedFile(): string {
+  const override = process.env.SEED_JSON_PATH;
+  const candidates = [
+    // Explicit override
+    override ? path.resolve(process.cwd(), override) : null,
+    // Common locations
+    path.resolve(process.cwd(), 'data', 'mbs_seed.json'),
+    // Repo root: ../../../../ from src/seed/
+    path.resolve(__dirname, '../../../..', 'data', 'mbs_seed.json'),
+    // Inside API folder (optional local data copy): ../../ from src/seed/
+    path.resolve(__dirname, '../..', 'data', 'mbs_seed.json'),
+  ].filter(Boolean) as string[];
+
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p;
   }
-];
+  console.error('Missing data file. Tried paths:\n' + candidates.map((p) => ` - ${p}`).join('\n'));
+  process.exit(1);
+}
+
+function loadSeedItems(): any[] {
+  const file = resolveSeedFile();
+  console.log(`Using seed JSON: ${file}`);
+  const raw = fs.readFileSync(file, 'utf-8');
+  const json = JSON.parse(raw);
+  if (!Array.isArray(json)) {
+    console.error('Seed JSON must be an array of items');
+    process.exit(1);
+  }
+  // Map fields to Supabase schema keys
+  return json.map((it) => ({
+    code: it.code,
+    title: it.title,
+    description: it.desc ?? it.description ?? '',
+    fee: it.fee ?? 0,
+    time_threshold: it.timeThreshold ?? it.time_threshold ?? null,
+    flags: it.flags ?? {},
+    mutually_exclusive_with: it.mutuallyExclusiveWith ?? it.mutually_exclusive_with ?? [],
+    reference_docs: it.references ?? it.reference_docs ?? [],
+  }));
+}
 
 async function ensureTableExists() {
   // Rely on schema.sql being applied. Optionally, a noop select to verify access.
@@ -130,6 +80,10 @@ async function seedSupabase() {
     console.log('Starting Supabase seed (idempotent upsert)...');
 
     await ensureTableExists();
+
+    // Load from unified JSON, then upsert on primary key 'code'
+    const sampleMbsItems = loadSeedItems();
+    console.log(`Loaded ${sampleMbsItems.length} items from data/mbs_seed.json`);
 
     // Upsert on primary key 'code' to be idempotent
     const { data, error } = await supabase

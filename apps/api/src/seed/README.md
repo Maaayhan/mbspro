@@ -14,12 +14,12 @@ pnpm seed
 ```
 
 ### Prerequisites
-- PostgreSQL running (use `pnpm db:up` from root)
-- Environment variables configured (copy `env.example` to `.env`)
+- Supabase environment variables configured (copy `env.example` to `.env`)
+- Unified seed JSON at `data/mbs_seed.json`
 
 ## Seed Data
 
-The seed script populates the `mbs_items` table with synthetic MBS data covering:
+The seed script now reads from `data/mbs_seed.json` and populates the `mbs_items` table (idempotent upsert). The same JSON can be ingested into the RAG vector index via `POST /api/rag/ingest { filename: "mbs_seed.json" }`.
 
 ### Standard Consultations
 - **Item 23**: GP consultation (<20 mins, $41.20)

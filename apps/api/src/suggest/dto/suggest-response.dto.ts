@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import type { SuggestResponse, SuggestCandidate, Signals } from '@mbspro/shared';
+import type { SuggestResponse, SuggestCandidate, Signals, RuleResult } from '@mbspro/shared';
 
 export class SuggestCandidateDto implements SuggestCandidate {
   @ApiProperty({ description: 'MBS item code', example: '23' })
@@ -32,6 +32,20 @@ export class SuggestCandidateDto implements SuggestCandidate {
     required: false
   })
   short_explain?: string;
+
+  @ApiProperty({
+    description: 'Rule evaluation results for this candidate',
+    required: false,
+    type: 'array',
+  })
+  rule_results?: RuleResult[];
+
+  @ApiProperty({
+    description: 'Compliance level derived from rules',
+    example: 'green',
+    required: false,
+  })
+  compliance?: 'green' | 'amber' | 'red';
 }
 
 export class SignalsDto implements Signals {

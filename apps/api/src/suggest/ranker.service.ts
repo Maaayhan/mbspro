@@ -44,8 +44,8 @@ const DEFAULT_WEIGHTS: Required<RankerWeights> = {
 export class RankerService {
   rank({ rows, signals, topN, weights }: RankInput): SuggestCandidate[] {
     const w = { ...DEFAULT_WEIGHTS, ...(weights || {}) } as Required<RankerWeights>;
-
-    const candidates = rows.map((row) => {
+    // Compute raw scores first
+    const rawCandidates = rows.map((row) => {
       const bm25 = Math.max(0, Math.min(1, row.sim ?? 0));
       const features: Record<string, number> = {};
       const hits: string[] = [];
@@ -98,6 +98,22 @@ export class RankerService {
         score_breakdown: { bm25, features },
         feature_hits: hits,
         short_explain: '',
+      } as SuggestCandidate;
+    });
+
+    // Normalize scores to [0,1]
+    const scores = rawCandidates.map((c) => c.score);
+    const minScore = Math.min(...scores);
+    const maxScore = Math.max(...scores);
+    const range = maxScore - minScore;
+
+    const candidates = rawCandidates.map((c) => {
+      const raw = c.score;
+      const normalized = range > 0 ? (raw - minScore) / range : 1;
+      return {
+        ...c,
+        score: Math.max(0, Math.min(1, normalized)),
+        score_breakdown: { ...(c.score_breakdown as any), score_raw: raw },
       } as SuggestCandidate;
     });
 

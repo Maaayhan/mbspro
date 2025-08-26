@@ -3,21 +3,21 @@ import { SuggestController } from './suggest.controller';
 import { SuggestService } from './suggest.service';
 import { SupabaseService } from '../services/supabase.service';
 import { SignalExtractorService } from './signal-extractor.service';
-import { RetrieverService } from './retriever.service';
 import { RankerService } from './ranker.service';
 import { ExplainService } from './explain.service';
-import { LexicalRetrieverService } from './lexical-retriever.service';
+import { RuleEngineService } from './rule-engine.service';
+import { RagModule } from '../rag/rag.module';
 
 @Module({
+  imports: [RagModule],
   controllers: [SuggestController],
   providers: [
     SuggestService,
     SupabaseService,
     SignalExtractorService,
-    RetrieverService,
     RankerService,
     ExplainService,
-    LexicalRetrieverService,
+    RuleEngineService,
   ],
 })
 export class SuggestModule {}

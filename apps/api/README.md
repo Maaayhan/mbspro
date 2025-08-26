@@ -55,12 +55,28 @@ pnpm --filter @mbspro/api dev
 - **Suggest**: `POST /api/suggest`
 - **Swagger Docs**: `GET /docs`
 
+### RAG Endpoints (Optional)
+
+If you set the RAG environment variables in `apps/api/env.example` (copy to `.env`), the API exposes:
+
+- `POST /api/rag/ingest` { filename, token? }: Ingest JSON from `data/filename` into Pinecone
+- `POST /api/rag/query` { query, top? }: Query RAG with vector retrieval, optional Cohere rerank, and OpenAI LLM
+- `GET /api/rag/health`: Health check
+
+Environment variables to set:
+
+- OPENAI_API_KEY, OPENAI_CHAT_MODEL, OPENAI_EMBED_MODEL
+- PINECONE_API_KEY, PINECONE_INDEX
+- COHERE_API_KEY (optional), COHERE_RERANK_MODEL (optional)
+- RERANK_CANDIDATES (default 60), RERANK_THRESHOLD (optional)
+- INGEST_SECRET (optional; protects ingest)
+
 ## Development
 
 - **Dev Server**: `pnpm --filter @mbspro/api dev`
 - **Build**: `pnpm --filter @mbspro/api build`
 - **Tests**: `pnpm --filter @mbspro/api test`
-- **Seed**: `pnpm --filter @mbspro/api seed`
+- **Seed**: `pnpm --filter @mbspro/api seed` (reads `data/mbs_seed.json`)
 - **Connection Check**: `pnpm --filter @mbspro/api test:connection`
 - **Example Searches**: `pnpm --filter @mbspro/api test:examples`
 
@@ -69,7 +85,7 @@ pnpm --filter @mbspro/api dev
 This API uses the Supabase JavaScript client for all database operations by default.
 
 - Schema location: `supabase/schema.sql`
-- Seed script: `apps/api/src/seed/supabase-seed.ts`
+- Seed script: `apps/api/src/seed/supabase-seed.ts` (loads `data/mbs_seed.json`)
 - Service: `apps/api/src/services/supabase.service.ts`
 
 > Note: Direct TypeORM Postgres connection is not required for the API runtime. The provided `DATABASE_URL` and config are primarily for tooling/tests.
