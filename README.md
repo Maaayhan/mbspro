@@ -188,7 +188,7 @@ After changes, restart the API and re-run `pnpm eval` to check metrics.
 - `pnpm build` - Build all applications for production
 - `pnpm lint` - Run linting across all packages
 - `pnpm test` - Run tests across all packages
-- `pnpm seed` - Seed the Supabase database with initial data
+- `pnpm seed` - Seed the Supabase database from `data/mbs_seed.json`
 - `pnpm clean` - Clean all build artifacts and node_modules
 - `pnpm fresh` - Clean and reinstall all dependencies
 

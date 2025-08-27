@@ -12,7 +12,13 @@ const convertRagToSuggest = (ragResponse: RagResponse): SuggestResponse => {
     return {
       code,
       title: result.title,
-      score: result.match_score,
+      // Normalize match_score to [0,1]
+      score: (() => {
+        const s = typeof result.match_score === 'number' ? result.match_score : 0;
+        // If it looks like a percentage (0-100), scale down; otherwise clamp to [0,1]
+        if (s > 1 && s <= 100) return Math.max(0, Math.min(1, s / 100));
+        return Math.max(0, Math.min(1, s));
+      })(),
       short_explain: result.match_reason,
       feature_hits: [`Fee: $${result.fee}`, `Benefit: $${result.benefit}`]
     };
@@ -38,6 +44,7 @@ export default function HomePage() {
   const [status, setStatus] = useState<number | null>(null)
   const [latencyMs, setLatencyMs] = useState<number | null>(null)
   const [showJson, setShowJson] = useState(false)
+  const [source, setSource] = useState<'local' | 'rag'>('local')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -54,37 +61,47 @@ export default function HomePage() {
     setLatencyMs(null)
 
     try {
-      // Call external RAG API
-      const ragApiUrl = 'https://bedrock-rag-api.onrender.com/rag/query'
-      const requestBody: RagRequest = {
-        query: note.trim(),
-        top: topN > 0 ? topN : 5,
-      }
-
+      const apiBase = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000').replace(/\/$/, '')
       const started = performance.now()
-      const res = await fetch(ragApiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      })
 
-      setStatus(res.status)
-      const elapsed = performance.now() - started
-      setLatencyMs(Math.round(elapsed))
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null)
-        throw new Error(
-          errorData?.message || `HTTP ${res.status}: ${res.statusText}`
-        )
+      if (source === 'local') {
+        // Call local suggest pipeline
+        const suggestUrl = `${apiBase}/api/suggest`
+        const body: SuggestRequest = { note: note.trim(), topN: topN > 0 ? topN : 5 }
+        const res = await fetch(suggestUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+        setStatus(res.status)
+        const elapsed = performance.now() - started
+        setLatencyMs(Math.round(elapsed))
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => null)
+          throw new Error(errorData?.message || `HTTP ${res.status}: ${res.statusText}`)
+        }
+        const data: SuggestResponse = await res.json()
+        setResponse(data)
+      } else {
+        // Call internal RAG endpoint and convert
+        const ragUrl = `${apiBase}/api/rag/query`
+        const requestBody: RagRequest = { query: note.trim(), top: topN > 0 ? topN : 5 }
+        const res = await fetch(ragUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+        })
+        setStatus(res.status)
+        const elapsed = performance.now() - started
+        setLatencyMs(Math.round(elapsed))
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => null)
+          throw new Error(errorData?.message || `HTTP ${res.status}: ${res.statusText}`)
+        }
+        const ragData: RagResponse = await res.json()
+        const convertedData = convertRagToSuggest(ragData)
+        setResponse(convertedData)
       }
-
-      const ragData: RagResponse = await res.json()
-      // Convert RAG response to our internal format
-      const convertedData = convertRagToSuggest(ragData)
-      setResponse(convertedData)
     } catch (err) {
       console.error('Error calling /suggest:', err)
       setError(err instanceof Error ? err.message : 'Failed to get suggestions')
@@ -159,6 +176,22 @@ Example:
               </select>
             </div>
 
+            <div className="flex-1">
+              <label htmlFor="source" className="form-label">
+                Data Source
+              </label>
+              <select
+                id="source"
+                className="form-textarea"
+                value={source}
+                onChange={(e) => setSource(e.target.value as 'local' | 'rag')}
+                disabled={loading}
+              >
+                <option value="local">Local (/api/suggest)</option>
+                <option value="rag">RAG (/api/rag/query)</option>
+              </select>
+            </div>
+
             <div className="flex space-x-3">
               <button
                 type="button"
@@ -222,7 +255,10 @@ Example:
                 Suggestions
               </h3>
               <div className="text-sm text-gray-600">
-                From <code className="bg-gray-100 px-1 rounded">POST /rag/query</code> 
+                From{' '}
+                <code className="bg-gray-100 px-1 rounded">
+                  {source === 'local' ? 'POST /suggest' : 'POST /rag/query'}
+                </code>
               </div>
             </div>
 
@@ -271,9 +307,44 @@ Example:
                     </div>
                   </div>
 
+                  {c.compliance && (
+                    <div className="mt-2">
+                      {c.compliance === 'green' && (
+                        <span className="inline-flex items-center rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                          Compliance: Green
+                        </span>
+                      )}
+                      {c.compliance === 'amber' && (
+                        <span className="inline-flex items-center rounded-full bg-yellow-50 px-2.5 py-0.5 text-xs font-medium text-yellow-700">
+                          Compliance: Amber
+                        </span>
+                      )}
+                      {c.compliance === 'red' && (
+                        <span className="inline-flex items-center rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700">
+                          Compliance: Red
+                        </span>
+                      )}
+                    </div>
+                  )}
+
                   {c.short_explain && (
                     <div className="mt-2 text-sm text-gray-700">
                       {c.short_explain}
+                    </div>
+                  )}
+
+                  {Array.isArray(c.rule_results) && c.rule_results.length > 0 && (
+                    <div className="mt-3 text-sm">
+                      <div className="text-xs font-medium text-gray-600 mb-1">Rules</div>
+                      <ul className="list-disc list-inside space-y-1">
+                        {c.rule_results.map((r, i) => (
+                          <li key={`${r.id}-${i}`} className="text-gray-700">
+                            <span className="font-semibold">{(r.status as any)?.toString()?.toUpperCase?.()}</span>
+                            {': '}
+                            {r.reason}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   )}
 

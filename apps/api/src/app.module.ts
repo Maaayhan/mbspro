@@ -3,7 +3,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { HealthModule } from './health/health.module';
 import { SuggestModule } from './suggest/suggest.module';
-import { RulesModule } from './rules/rules.module';
+import { RagModule } from './rag/rag.module';
 
 const logger = new Logger('AppModule');
 
@@ -15,7 +15,6 @@ logger.log('📊 Using Supabase client for all database operations');
     // Removed TypeORM - using Supabase client directly
     HealthModule,
     SuggestModule,
-    RulesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

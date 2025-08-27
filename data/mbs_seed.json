@@ -1,0 +1,104 @@
+[
+  {
+    "code": "23",
+    "title": "Professional attendance by a general practitioner",
+    "desc": "Professional attendance by a general practitioner at consulting rooms, surgery or hospital if the attendance is for less than 20 minutes duration",
+    "fee": 41.2,
+    "timeThreshold": 20,
+    "flags": { "telehealth": true, "after_hours": false },
+    "mutuallyExclusiveWith": ["24", "25", "26", "27", "28", "30", "35", "36", "37", "38"],
+    "references": ["MBS Guidelines 2023", "GP Consultation Standards", "Time-based Billing Guide"]
+  },
+  {
+    "code": "36",
+    "title": "Professional attendance by a general practitioner - prolonged",
+    "desc": "Professional attendance by a general practitioner exceeding 20 minutes but not exceeding 40 minutes duration",
+    "fee": 71.7,
+    "timeThreshold": 40,
+    "flags": { "telehealth": true, "after_hours": false },
+    "mutuallyExclusiveWith": ["23", "44"],
+    "references": ["MBS Guidelines 2023", "Prolonged Consultation Guidelines", "Clinical Documentation Requirements"]
+  },
+  {
+    "code": "44",
+    "title": "Professional attendance by a general practitioner - extended",
+    "desc": "Professional attendance by a general practitioner exceeding 40 minutes duration",
+    "fee": 105.55,
+    "timeThreshold": null,
+    "flags": { "telehealth": true, "after_hours": false },
+    "mutuallyExclusiveWith": ["23", "36"],
+    "references": ["MBS Guidelines 2023", "Extended Consultation Framework"]
+  },
+  {
+    "code": "91800",
+    "title": "Telehealth consultation by general practitioner",
+    "desc": "Professional video consultation conducted by a general practitioner with a patient not physically present at the same location",
+    "fee": 41.2,
+    "timeThreshold": 20,
+    "flags": { "telehealth": true, "after_hours": false, "video_required": true },
+    "mutuallyExclusiveWith": ["23", "91801"],
+    "references": ["Telehealth Guidelines 2023", "Video Consultation Standards", "Digital Health Requirements"]
+  },
+  {
+    "code": "597",
+    "title": "After-hours GP consultation",
+    "desc": "Professional attendance by a general practitioner provided between 11pm and 7am on any day, or between 11pm on Saturday and 7am on Monday",
+    "fee": 71.35,
+    "timeThreshold": 20,
+    "flags": { "telehealth": false, "after_hours": true },
+    "mutuallyExclusiveWith": ["23", "36", "598"],
+    "references": ["After Hours Guidelines", "Emergency Care Standards", "Weekend Service Protocols"]
+  },
+  {
+    "code": "598",
+    "title": "After-hours GP consultation - prolonged",
+    "desc": "After-hours professional attendance by a general practitioner exceeding 20 minutes but not exceeding 40 minutes",
+    "fee": 113.75,
+    "timeThreshold": 40,
+    "flags": { "telehealth": false, "after_hours": true },
+    "mutuallyExclusiveWith": ["597", "599"],
+    "references": ["After Hours Guidelines", "Extended After Hours Care"]
+  },
+  {
+    "code": "104",
+    "title": "Professional attendance by a specialist",
+    "desc": "Professional attendance by a specialist where the patient is referred",
+    "fee": 85.55,
+    "timeThreshold": 45,
+    "flags": { "telehealth": false, "after_hours": true, "referral_required": true },
+    "mutuallyExclusiveWith": ["105", "116"],
+    "references": ["Specialist Guidelines", "Referral Requirements", "Specialist Care Standards"]
+  },
+  {
+    "code": "703",
+    "title": "Health assessment for people aged 40-49 years",
+    "desc": "Health assessment for people aged 40-49 years inclusive who are at risk of developing chronic disease",
+    "fee": 234.3,
+    "timeThreshold": null,
+    "flags": { "telehealth": true, "after_hours": false, "preventive": true },
+    "mutuallyExclusiveWith": ["705", "707", "715"],
+    "references": ["Health Assessment Guidelines", "Preventive Care Framework", "Chronic Disease Prevention"]
+  },
+  {
+    "code": "2712",
+    "title": "GP mental health consultation",
+    "desc": "Preparation of a GP Mental Health Treatment Plan by a general practitioner",
+    "fee": 286.75,
+    "timeThreshold": null,
+    "flags": { "telehealth": true, "after_hours": false, "mental_health": true },
+    "mutuallyExclusiveWith": ["2713", "2715"],
+    "references": ["Mental Health Guidelines", "Care Plan Requirements", "Psychological Treatment Framework"]
+  },
+  {
+    "code": "30192",
+    "title": "Excision of skin lesion",
+    "desc": "Excision of malignant or premalignant lesion of the skin by any method",
+    "fee": 143.95,
+    "timeThreshold": null,
+    "flags": { "telehealth": false, "after_hours": true, "procedure": true },
+    "mutuallyExclusiveWith": [],
+    "references": ["Surgical Guidelines", "Skin Cancer Treatment", "Minor Procedures Manual"]
+  }
+]
+
+

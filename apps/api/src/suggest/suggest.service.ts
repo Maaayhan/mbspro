@@ -5,7 +5,8 @@ import type { SuggestResponse, SuggestCandidate } from '@mbspro/shared';
 import { SignalExtractorService } from './signal-extractor.service';
 import { RankerService } from './ranker.service';
 import { ExplainService } from './explain.service';
-import { LexicalRetrieverService } from './lexical-retriever.service';
+import { RuleEngineService } from './rule-engine.service';
+import { RagService } from '../rag/rag.service';
 
 @Injectable()
 export class SuggestService {
@@ -13,9 +14,10 @@ export class SuggestService {
 
   constructor(
     private readonly signalExtractor: SignalExtractorService,
-    private readonly lexical: LexicalRetrieverService,
     private readonly ranker: RankerService,
     private readonly explainer: ExplainService,
+    private readonly rules: RuleEngineService,
+    private readonly rag: RagService,
   ) {}
 
   async suggest(request: SuggestRequestDto): Promise<SuggestResponseDto> {
@@ -26,24 +28,63 @@ export class SuggestService {
     try {
       const signalsInternal = this.signalExtractor.extract(note);
       const topK = Math.max(30, topN * 10);
-      const rows = await this.lexical.retrieve(note, signalsInternal, topK);
-      // Adapt to ranker's expected shape by attaching sim as sim field
+
+      // RAG-only retrieval
+      let rows: any[] = [];
+      try {
+        const rag = await this.rag.queryRag(note, Math.min(topN + 3, 15));
+        if (rag && Array.isArray((rag as any).results)) {
+          rows = (rag as any).results.map((r: any) => ({
+            code: (r.itemNum || (Array.isArray(r.itemNums) ? (r.itemNums[0] || '') : '')),
+            title: r.title || '',
+            description: r.match_reason || '',
+            flags: {},
+            time_threshold: undefined,
+            bm25: typeof r.match_score === 'number' ? Math.max(0, Math.min(1, r.match_score)) : 0,
+          }));
+        }
+      } catch (e) {
+        this.logger.warn(`RAG query failed: ${String(e)}`);
+      }
+      // Preserve item facts so ranker and rules can use them
       const rowsForRanker = rows.map((r) => ({
         code: r.code,
         title: r.title,
-        description: '',
+        description: r.description,
         fee: 0,
-        time_threshold: undefined,
-        flags: {},
-        mutually_exclusive_with: [],
-        reference_docs: [],
+        time_threshold: r.time_threshold,
+        flags: r.flags,
+        mutually_exclusive_with: (r as any).mutually_exclusive_with || [],
+        reference_docs: (r as any).reference_docs || [],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         sim: r.bm25,
       } as any));
 
       const ranked = this.ranker.rank({ rows: rowsForRanker, signals: signalsInternal, topN });
-      const explained = ranked.map((c) => this.explainer.explain(c));
+      const withRules = ranked.map((c) => {
+        const original = rowsForRanker.find((r) => String(r.code) === String(c.code));
+        const { ruleResults, compliance } = this.rules.evaluate({
+          note: {
+            mode: signalsInternal.mode,
+            after_hours: signalsInternal.afterHours,
+            chronic: signalsInternal.chronic,
+            duration: signalsInternal.duration,
+            keywords: signalsInternal.keywords,
+          },
+          item: {
+            code: c.code,
+            time_threshold: original?.time_threshold,
+            flags: original?.flags || {},
+            mutually_exclusive_with: original?.mutually_exclusive_with || [],
+          },
+          context: {
+            selected_codes: [],
+          },
+        });
+        return { ...c, rule_results: ruleResults, compliance };
+      });
+      const explained = withRules.map((c) => this.explainer.explain(c));
 
       const response: SuggestResponse = {
         candidates: explained,
