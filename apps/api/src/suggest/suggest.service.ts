@@ -37,7 +37,9 @@ export class SuggestService {
           rows = (rag as any).results.map((r: any) => ({
             code: (r.itemNum || (Array.isArray(r.itemNums) ? (r.itemNums[0] || '') : '')),
             title: r.title || '',
-            description: r.match_reason || '',
+            description: r.description || '',
+            match_reason: r.match_reason || '',
+            fee: r.fee ? parseFloat(String(r.fee).replace(/[^0-9.]/g, '')) : 0,
             flags: {},
             time_threshold: undefined,
             bm25: typeof r.match_score === 'number' ? Math.max(0, Math.min(1, r.match_score)) : 0,
@@ -51,7 +53,8 @@ export class SuggestService {
         code: r.code,
         title: r.title,
         description: r.description,
-        fee: 0,
+        match_reason: r.match_reason,
+        fee: r.fee || 0,
         time_threshold: r.time_threshold,
         flags: r.flags,
         mutually_exclusive_with: (r as any).mutually_exclusive_with || [],
@@ -82,7 +85,22 @@ export class SuggestService {
             selected_codes: [],
           },
         });
-        return { ...c, rule_results: ruleResults, compliance };
+        
+        // Add fee to feature_hits
+        const featureHits = [...(c.feature_hits || [])];
+        if (original?.fee && original.fee > 0) {
+          featureHits.push(`Fee: $${original.fee.toFixed(2)}`);
+        }
+        
+        const result = { 
+          ...c, 
+          feature_hits: featureHits,
+          short_explain: original?.match_reason || c.short_explain || '',
+          rule_results: ruleResults, 
+          compliance 
+        };
+        
+        return result;
       });
       const explained = withRules.map((c) => this.explainer.explain(c));
 

@@ -36,8 +36,10 @@ export class ExplainService {
       keys.push('chronic');
     }
 
-    let shortExplain = '';
-    if (keys.length > 0) {
+    let shortExplain = candidate.short_explain || '';
+    
+    // Only add feature explanations if no existing explanation
+    if (!shortExplain && keys.length > 0) {
       // Build up to 2 sentences
       const sentences: string[] = [];
       // Prioritize contextual lines first
