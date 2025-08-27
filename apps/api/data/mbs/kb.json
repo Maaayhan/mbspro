@@ -1,0 +1,59 @@
+{
+  "version": "kb-0.1",
+  "items": [
+    {
+      "item": "23",
+      "title": "GP attendance (Level B) at consulting rooms",
+      "description": "Face-to-face GP consult lasting 6–20 minutes with relevant history/exam/management.",
+      "eligibility": ["Face-to-face (in rooms)", "6–20 minutes", "Documentation present"],
+      "restrictions": ["Same-day exclusivity with Level C/D"],
+      "category": "gp",
+      "updated_at": "2025-01-01T00:00:00Z"
+    },
+    {
+      "item": "36",
+      "title": "GP attendance (Level C) at consulting rooms",
+      "description": "Face-to-face GP consult lasting at least 20 minutes.",
+      "eligibility": ["Face-to-face (in rooms)", ">=20 minutes"],
+      "restrictions": ["Same-day exclusivity with Level B"],
+      "category": "gp",
+      "updated_at": "2025-01-01T00:00:00Z"
+    },
+    {
+      "item": "597",
+      "title": "After-hours GP attendance (phone)",
+      "description": "After-hours GP attendance by phone.",
+      "eligibility": ["After-hours bucket", "Phone mode"],
+      "restrictions": [],
+      "category": "gp",
+      "updated_at": "2025-01-01T00:00:00Z"
+    },
+    {
+      "item": "91800",
+      "title": "GP telehealth (video) attendance",
+      "description": "Video telehealth attendance by a GP.",
+      "eligibility": ["Telehealth video"],
+      "restrictions": [],
+      "category": "telehealth",
+      "updated_at": "2025-01-01T00:00:00Z"
+    },
+    {
+      "item": "92767",
+      "title": "Sexual health medicine specialist video initial assessment (>=45m)",
+      "description": "Initial assessment via video by sexual health medicine specialist; >=45 minutes; referral; often hospital.",
+      "eligibility": ["Specialist", "Video telehealth", ">=45 minutes", "Referral present", "Often hospital"],
+      "restrictions": ["Frequency window with related initial items"],
+      "category": "specialist",
+      "updated_at": "2025-01-01T00:00:00Z"
+    },
+    {
+      "item": "721",
+      "title": "Chronic disease management plan (care plan)",
+      "description": "GP management plan including problems/goals/actions and review plan.",
+      "eligibility": ["Problems", "Goals", "Actions", "Review plan"],
+      "restrictions": ["Frequency limits may apply"],
+      "category": "gp",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  ]
+}

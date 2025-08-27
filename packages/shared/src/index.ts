@@ -23,6 +23,7 @@ export interface SuggestCandidate {
   code: string;
   title: string;
   score: number;
+  confidence?: number;
   score_breakdown?: Record<string, number>;
   feature_hits?: string[];
   short_explain?: string;

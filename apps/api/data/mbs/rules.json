@@ -1,0 +1,53 @@
+{
+  "version": "rules-0.1",
+  "rules": [
+    {
+      "id": "same_day_exclusive_gp_b_c",
+      "kind": "same_day_exclusive",
+      "applies_to": ["23"],
+      "parameters": { "with": ["36"] },
+      "notes": "Level B cannot be claimed same day with Level C",
+      "hard": true
+    },
+    {
+      "id": "min_duration_level_c",
+      "kind": "min_duration_by_level",
+      "applies_to": ["36"],
+      "parameters": { "min": 20 },
+      "notes": ">=20 minutes for Level C",
+      "hard": true
+    },
+    {
+      "id": "after_hours_required_597",
+      "kind": "eligibility_required",
+      "applies_to": ["597"],
+      "parameters": { "hoursBucket": "after_hours", "mode": "phone" },
+      "notes": "Requires after-hours and phone mode",
+      "hard": true
+    },
+    {
+      "id": "telehealth_video_required_91800",
+      "kind": "eligibility_required",
+      "applies_to": ["91800"],
+      "parameters": { "mode": "video" },
+      "notes": "Video required",
+      "hard": true
+    },
+    {
+      "id": "initial_specialist_min_92767",
+      "kind": "min_duration_by_level",
+      "applies_to": ["92767"],
+      "parameters": { "min": 45 },
+      "notes": "Initial specialist >=45 min",
+      "hard": true
+    },
+    {
+      "id": "careplan_required_elements_721",
+      "kind": "eligibility_required",
+      "applies_to": ["721"],
+      "parameters": { "elements": ["problems", "goals", "actions", "reviewPlan"] },
+      "notes": "Care plan elements should be present",
+      "hard": false
+    }
+  ]
+}

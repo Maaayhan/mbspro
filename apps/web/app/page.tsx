@@ -9,16 +9,17 @@ const convertRagToSuggest = (ragResponse: RagResponse): SuggestResponse => {
     // Handle both single itemNum and multiple itemNums
     const code = result.itemNum || (result.itemNums ? result.itemNums.join(', ') : 'Unknown');
     
-    return {
-      code,
-      title: result.title,
-      // Normalize match_score to [0,1]
-      score: (() => {
+    const score = (() => {
         const s = typeof result.match_score === 'number' ? result.match_score : 0;
         // If it looks like a percentage (0-100), scale down; otherwise clamp to [0,1]
         if (s > 1 && s <= 100) return Math.max(0, Math.min(1, s / 100));
         return Math.max(0, Math.min(1, s));
-      })(),
+      })();
+    return {
+      code,
+      title: result.title,
+      score,
+      confidence: score,
       short_explain: result.match_reason,
       feature_hits: [`Fee: $${result.fee}`, `Benefit: $${result.benefit}`]
     };
@@ -51,6 +52,11 @@ export default function HomePage() {
   const [validation, setValidation] = useState<{ ok: boolean, blocked: boolean, conflicts: Array<{ code: string, with: string[] }>, warnings: string[] } | null>(null)
   const [explainOpen, setExplainOpen] = useState(false)
   const [explainFor, setExplainFor] = useState<SuggestCandidate | null>(null)
+  const [mbs, setMbs] = useState<any | null>(null)
+  const [mbsLoading, setMbsLoading] = useState(false)
+  const [mbsError, setMbsError] = useState<string | null>(null)
+  const [metrics, setMetrics] = useState<any | null>(null)
+  const [reloading, setReloading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -127,6 +133,8 @@ export default function HomePage() {
     setSelectedCodes([])
     setValidation(null)
     setValidateError(null)
+    setMbs(null)
+    setMbsError(null)
   }
 
   const toggleSelect = (code: string) => {
@@ -185,6 +193,66 @@ export default function HomePage() {
   const closeExplain = () => {
     setExplainOpen(false)
     setExplainFor(null)
+  }
+
+  const handleMbsCodes = async () => {
+    if (!note.trim()) {
+      setMbsError('Please enter a clinical note')
+      return
+    }
+    try {
+      setMbsLoading(true)
+      setMbsError(null)
+      const apiBase = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000').replace(/\/$/, '')
+      const url = `${apiBase}/api/mbs-codes`
+      const body = {
+        episode_id: 'ui-demo',
+        note_text: note.trim(),
+        attachments: [],
+        options: { top_k: topN, return_spans: true }
+      }
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.message || `HTTP ${res.status}`)
+      }
+      const data = await res.json()
+      setMbs(data)
+    } catch (e) {
+      setMbsError(e instanceof Error ? e.message : 'Call /mbs-codes failed')
+      setMbs(null)
+    } finally {
+      setMbsLoading(false)
+    }
+  }
+
+  const fetchMetrics = async () => {
+    try {
+      const apiBase = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000').replace(/\/$/, '')
+      const url = `${apiBase}/api/mbs-admin/metrics/snapshot`
+      const res = await fetch(url)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      setMetrics(data)
+    } catch (e) {
+      setMetrics({ error: e instanceof Error ? e.message : 'failed' })
+    }
+  }
+
+  const hotReload = async () => {
+    try {
+      setReloading(true)
+      const apiBase = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000').replace(/\/$/, '')
+      const url = `${apiBase}/api/mbs-admin/reload`
+      const res = await fetch(url, { method: 'POST' })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      await res.json().catch(() => ({}))
+    } catch (e) {
+      // no-op
+    } finally {
+      setReloading(false)
+      fetchMetrics()
+    }
   }
 
   return (
@@ -306,6 +374,21 @@ Example:
                 Clear
               </button>
               <button
+                type="button"
+                onClick={fetchMetrics}
+                className="btn-secondary"
+              >
+                Metrics
+              </button>
+              <button
+                type="button"
+                onClick={hotReload}
+                className="btn-secondary"
+                disabled={reloading}
+              >
+                {reloading ? 'Hot Reloading...' : 'Hot Reload'}
+              </button>
+              <button
                 type="submit"
                 className="btn-primary"
                 disabled={loading || !note.trim()}
@@ -321,6 +404,14 @@ Example:
                 ) : (
                   'Get Suggestions'
                 )}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={mbsLoading || !note.trim()}
+                onClick={handleMbsCodes}
+              >
+                {mbsLoading ? 'Running /mbs-codes...' : 'Run /mbs-codes'}
               </button>
             </div>
           </div>
@@ -439,8 +530,8 @@ Example:
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xs text-gray-500">Score</div>
-                      <div className="text-lg font-bold text-gray-900">{c.score?.toFixed(3)}</div>
+                      <div className="text-xs text-gray-500">Score / Conf.</div>
+                      <div className="text-lg font-bold text-gray-900">{c.score?.toFixed(3)}{typeof c.confidence === 'number' ? ` / ${c.confidence.toFixed(2)}` : ''}</div>
                       <div className="mt-2 flex items-center justify-end space-x-3">
                         <label className="inline-flex items-center space-x-2 text-xs text-gray-700">
                           <input type="checkbox" className="form-checkbox" checked={selectedCodes.includes(c.code)} onChange={() => toggleSelect(c.code)} />
@@ -611,6 +702,75 @@ Example:
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MBS-Codes Results */}
+      {mbs && (
+        <div className="max-w-4xl mx-auto">
+          <div className="card mt-4">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="text-lg font-semibold text-gray-900">/mbs-codes</div>
+              <div className="text-xs text-gray-500">rules: {mbs?.meta?.rules_version || '-'} · prompt: {mbs?.meta?.prompt_version || '-'}</div>
+            </div>
+            {mbs.low_confidence_message && (
+              <div className="mb-2 text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded px-2 py-1">{mbs.low_confidence_message}</div>
+            )}
+            <div className="space-y-2">
+              {(mbs.items || []).map((it: any, i: number) => (
+                <div key={`${it.item}-${i}`} className="border border-gray-200 rounded p-3 text-sm">
+                  <div className="flex items-center justify-between">
+                    <div className="font-medium text-gray-900">{it.item} · {it.title}</div>
+                    <div className="text-xs text-gray-700">Conf: {(it.confidence ?? 0).toFixed(2)}</div>
+                  </div>
+                  <div className="mt-1 text-gray-800">{it.reasoning}</div>
+                  {Array.isArray(it.rule_results) && it.rule_results.length > 0 && (
+                    <div className="mt-2 text-xs">
+                      <span className="font-semibold text-gray-700">Rules: </span>
+                      {it.rule_results.map((r: any, j: number) => (
+                        <span key={j} className={"inline-block mr-2 " + (r.pass ? 'text-green-700' : (r.hard ? 'text-red-700' : 'text-yellow-700'))}>
+                          {r.pass ? 'PASS' : (r.hard ? 'FAIL' : 'WARN')}({r.rule_id})
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {Array.isArray(it.evidence) && it.evidence.length > 0 && (
+                    <div className="mt-2 text-xs text-gray-600">
+                      <div className="font-medium text-gray-700 mb-1">Evidence</div>
+                      <ul className="list-disc list-inside">
+                        {it.evidence.slice(0,6).map((e: any, k: number) => (
+                          <li key={k}><span className="text-gray-500">{e.field}</span>: {e.text}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 text-xs text-gray-500">latency: {typeof mbs?.meta?.duration_ms === 'number' ? `${mbs.meta.duration_ms} ms` : '-'}</div>
+          </div>
+        </div>
+      )}
+
+      {mbsError && (
+        <div className="max-w-4xl mx-auto mt-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1">{mbsError}</div>
+      )}
+
+      {metrics && (
+        <div className="max-w-4xl mx-auto mt-4">
+          <div className="card">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="text-lg font-semibold text-gray-900">Metrics Snapshot</div>
+              <div className="text-xs text-gray-500">last reload: {metrics.last_reload_at || '-'}</div>
+            </div>
+            <div className="text-sm text-gray-800">total: {metrics.total_requests ?? 0} · avg latency: {metrics.avg_duration_ms ?? 0} ms</div>
+            {metrics?.versions && (
+              <div className="text-xs text-gray-600 mt-1">kb: {metrics.versions.kb || '-'} · rules: {metrics.versions.rules || '-'}</div>
+            )}
+            {metrics?.counters && (
+              <div className="text-xs text-gray-600 mt-1">low_confidence: {metrics.counters.low_confidence || 0}</div>
+            )}
           </div>
         </div>
       )}
