@@ -40,6 +40,7 @@ export class SignalExtractorService {
     const candidates = [
       'consultation', 'general practitioner', 'gp', 'telehealth', 'after hours', 'home visit',
       'emergency', 'review', 'follow up', 'assessment', 'pain', 'medication', 'physiotherapy',
+      'care plan', 'management plan', 'problems', 'problem list', 'goals', 'actions', 'review plan',
       '会诊', '面诊', '复诊', '慢性', '电话', '视频'
     ];
     const hits = new Set<string>();

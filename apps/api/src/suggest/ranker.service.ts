@@ -95,7 +95,7 @@ export class RankerService {
         code: row.code,
         title: row.title,
         score,
-        score_breakdown: { bm25, features },
+        score_breakdown: { bm25 },
         feature_hits: hits,
         short_explain: '',
       } as SuggestCandidate;
@@ -113,7 +113,7 @@ export class RankerService {
       return {
         ...c,
         score: Math.max(0, Math.min(1, normalized)),
-        score_breakdown: { ...(c.score_breakdown as any), score_raw: raw },
+        score_breakdown: { bm25: (c as any).score_breakdown?.bm25 ?? 0, score_raw: raw },
       } as SuggestCandidate;
     });
 

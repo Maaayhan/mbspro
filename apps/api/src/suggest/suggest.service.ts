@@ -64,7 +64,7 @@ export class SuggestService {
       const ranked = this.ranker.rank({ rows: rowsForRanker, signals: signalsInternal, topN });
       const withRules = ranked.map((c) => {
         const original = rowsForRanker.find((r) => String(r.code) === String(c.code));
-        const { ruleResults, compliance } = this.rules.evaluate({
+        const { ruleResults, compliance, blocked, penalties, warnings } = this.rules.evaluate({
           note: {
             mode: signalsInternal.mode,
             after_hours: signalsInternal.afterHours,
@@ -79,10 +79,21 @@ export class SuggestService {
             mutually_exclusive_with: original?.mutually_exclusive_with || [],
           },
           context: {
-            selected_codes: [],
+            selected_codes: Array.isArray((request as any).selectedCodes) ? (request as any).selectedCodes.map(String) : [],
+            last_claimed_items: Array.isArray((request as any).lastClaimedItems) ? (request as any).lastClaimedItems : [],
+            provider_type: (request as any).providerType,
+            location: (request as any).location,
+            referral_present: (request as any).referralPresent,
+            hours_bucket: (request as any).hoursBucket,
+            consult_start: (request as any).consultStart,
+            consult_end: (request as any).consultEnd,
+            now_iso: new Date().toISOString(),
           },
         });
-        return { ...c, rule_results: ruleResults, compliance };
+        const riskBanner = compliance;
+        // Apply penalties to score (clamped)
+        const newScore = Math.max(0, Math.min(1, (c.score ?? 0) - (penalties ?? 0)));
+        return { ...c, score: newScore, rule_results: ruleResults, compliance, riskBanner, blocked, penalties, warnings } as any;
       });
       const explained = withRules.map((c) => this.explainer.explain(c));
 

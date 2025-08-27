@@ -1,5 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { RuleCandidateDto } from "./dto/evaluate-rule.dto";
+import { ValidateSelectionDto } from './dto/validate-selection.dto';
+import * as fs from 'fs';
+import * as path from 'path';
 import { SuggestCandidate } from "../shared/index";
 
 /// Simple rule evaluation service
@@ -65,5 +68,39 @@ export class RulesService {
         status,
       };
     });
+  }
+
+  validateSelection(dto: ValidateSelectionDto) {
+    // Load normalized rules to inspect mutual exclusivity and flags
+    const rulesPath = process.env.MBS_RULES_JSON || path.resolve(__dirname, '..', 'suggest', 'mbs_rules.normalized.json');
+    let byCode = new Map<string, any>();
+    try {
+      const rawPath = fs.existsSync(rulesPath) ? rulesPath : path.resolve(process.cwd(), 'apps', 'api', 'src', 'suggest', 'mbs_rules.normalized.json');
+      const raw = fs.readFileSync(rawPath, 'utf8');
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        byCode = new Map(arr.map((x: any) => [String(x.code), x]));
+      }
+    } catch {}
+
+    const selected = new Set<string>((dto.selectedCodes || []).map(String));
+    const conflicts: Array<{ code: string; with: string[] }> = [];
+    for (const code of selected) {
+      const item = byCode.get(code);
+      const ex = Array.isArray(item?.mutuallyExclusiveWith) ? item.mutuallyExclusiveWith.map(String) : [];
+      const overlap = ex.filter((c: string) => selected.has(c));
+      if (overlap.length > 0) conflicts.push({ code, with: overlap });
+    }
+
+    // Simple blocked rule: if any conflict, mark blocked
+    const blocked = conflicts.length > 0;
+    const warnings: string[] = conflicts.map((c) => `${c.code} ↔ ${c.with.join(', ')}`);
+
+    return {
+      ok: true,
+      blocked,
+      conflicts,
+      warnings,
+    };
   }
 }

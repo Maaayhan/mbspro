@@ -4,7 +4,8 @@ import { CohereClient } from 'cohere-ai';
 import { Pinecone } from '@pinecone-database/pinecone';
 import { PineconeStore } from '@langchain/pinecone';
 import { CharacterTextSplitter } from 'langchain/text_splitter';
-import { Document } from '@langchain/core/documents';
+// Fallback lightweight Document type to avoid optional dependency in tests
+type Document = { pageContent: string; metadata?: any };
 
 export interface RagQueryRequest { query: string; top?: number }
 
@@ -54,11 +55,11 @@ export class RagService {
 
     const docs: Document[] = data.map((item: any, idx: number) => {
       const content = item.text || JSON.stringify(item);
-      return new Document({ pageContent: content, metadata: { ...item, _id: item.id || String(idx) } });
+      return { pageContent: content, metadata: { ...item, _id: item.id || String(idx) } } as Document;
     });
 
     const splitter = new CharacterTextSplitter({ chunkSize: 1000, chunkOverlap: 200 });
-    const chunks = await splitter.splitDocuments(docs);
+    const chunks = await splitter.splitDocuments(docs as any);
     await PineconeStore.fromDocuments(chunks, this.embeddings!, {
       pineconeIndex: this.pineconeIndex,
       namespace: 'default',
@@ -74,9 +75,9 @@ export class RagService {
     const RERANK_CANDIDATES = Math.min(Math.max(parseInt(process.env.RERANK_CANDIDATES || '60') || 60, 5), 200);
 
     const topK = Math.min(Math.max(parseInt(String(top)) || 5, 1), 15);
-    const candidateDocs: Document[] = await this.vectorStore!.similaritySearch(query, RERANK_CANDIDATES);
+    const candidateDocs: any[] = await this.vectorStore!.similaritySearch(query, RERANK_CANDIDATES);
 
-    let reranked: { doc: Document; score: number }[] = candidateDocs.map((d) => ({ doc: d, score: 0 }));
+    let reranked: { doc: any; score: number }[] = candidateDocs.map((d: any) => ({ doc: d, score: 0 }));
     if (this.cohere) {
       const rerankResp: any = await this.cohere.rerank({
         model: COHERE_MODEL,
