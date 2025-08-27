@@ -26,13 +26,10 @@ export class SuggestService {
     const topN = request.topN && request.topN > 0 ? request.topN : 5;
 
     try {
-      const signalsInternal = this.signalExtractor.extract(note);
-      const topK = Math.max(30, topN * 10);
-
-      // RAG-only retrieval
+      // Parallelize signals extraction and RAG
+      const signalsPromise = Promise.resolve().then(() => this.signalExtractor.extract(note));
       let rows: any[] = [];
-      try {
-        const rag = await this.rag.queryRag(note, Math.min(topN + 3, 15));
+      const ragPromise = this.rag.queryRag(note, Math.min(topN + 3, 15)).then((rag) => {
         if (rag && Array.isArray((rag as any).results)) {
           rows = (rag as any).results.map((r: any) => ({
             code: (r.itemNum || (Array.isArray(r.itemNums) ? (r.itemNums[0] || '') : '')),
@@ -43,9 +40,12 @@ export class SuggestService {
             bm25: typeof r.match_score === 'number' ? Math.max(0, Math.min(1, r.match_score)) : 0,
           }));
         }
-      } catch (e) {
+      }).catch((e) => {
         this.logger.warn(`RAG query failed: ${String(e)}`);
-      }
+      });
+
+      const [signalsInternal] = await Promise.all([signalsPromise, ragPromise]);
+      const topK = Math.max(30, topN * 10);
       // Preserve item facts so ranker and rules can use them
       const rowsForRanker = rows.map((r) => ({
         code: r.code,
