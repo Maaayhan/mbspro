@@ -5,6 +5,7 @@ import Link from 'next/link'
 import AppLayout from '@/components/AppLayout'
 import { useClaimDraft } from '@/store/useClaimDraft'
 import { runQuickRules } from '@/lib/quickRules'
+import { useSuggestResults } from '@/store/useSuggestResults'
 import { 
   MicrophoneIcon, 
   SparklesIcon,
@@ -25,6 +26,7 @@ interface SuggestCandidate {
   short_explain?: string
   rule_results?: any[]
   compliance?: 'green' | 'amber' | 'red'
+  confidence?: number
 }
 
 interface SuggestResponse {
@@ -39,12 +41,15 @@ interface SuggestResponse {
 
 export default function SuggestionsPage() {
   const { draft, setNotes, addItem, removeItem, setQuickRules, clear } = useClaimDraft()
+  const { setCandidates, setNote, candidates: storedCandidates, note: storedNote } = useSuggestResults()
   const [soapNotes, setSoapNotes] = useState('')
   const [suggestions, setSuggestions] = useState<SuggestCandidate[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [expandedExplain, setExpandedExplain] = useState<string | null>(null)
+  const [selectionBlocked, setSelectionBlocked] = useState(false)
+  const [selectionWarnings, setSelectionWarnings] = useState<string[]>([])
 
   // Initialize notes from draft and check for expired draft
   useEffect(() => {
@@ -53,10 +58,19 @@ export default function SuggestionsPage() {
       if (draft.meta.updatedAt < threeDaysAgo) {
         clear() // Auto-clear expired draft
       } else {
-        setSoapNotes(draft.notes || '')
+        setSoapNotes(draft.notes || storedNote || '')
       }
     }
-  }, [draft.meta?.updatedAt, draft.notes, clear])
+  }, [draft.meta?.updatedAt, draft.notes, storedNote, clear])
+
+  // Restore suggestions from persisted store when returning from explain page
+  useEffect(() => {
+    if ((!showSuggestions || suggestions.length === 0) && Array.isArray(storedCandidates) && storedCandidates.length > 0) {
+      setSuggestions(storedCandidates as any)
+      setShowSuggestions(true)
+    }
+    if (!soapNotes && storedNote) setSoapNotes(storedNote)
+  }, [storedCandidates, storedNote])
 
   // Handle notes change: update both local state and global draft
   const onNotesChange = (v: string) => {
@@ -65,6 +79,21 @@ export default function SuggestionsPage() {
   }
 
   // Handle Accept: add to global draft and run quick rules
+  const validateSelection = async (codes: string[]) => {
+    try {
+      const apiBase = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000').replace(/\/$/, '')
+      const res = await fetch(`${apiBase}/api/rules/validate-selection`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selectedCodes: codes, note: draft.notes || soapNotes })
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      setSelectionBlocked(!!data.blocked)
+      setSelectionWarnings(Array.isArray(data.warnings) ? data.warnings : [])
+    } catch {}
+  }
+
   const handleAccept = (s: SuggestCandidate) => {
     const newItem = { 
       code: s.code, 
@@ -77,6 +106,7 @@ export default function SuggestionsPage() {
     const updatedItems = [...draft.selected, newItem]
     const results = runQuickRules({ notes: draft.notes || soapNotes, items: updatedItems })
     setQuickRules(results)
+    validateSelection(updatedItems.map(i => i.code))
   }
 
   // Handle Remove: remove from global draft and re-run quick rules
@@ -85,7 +115,15 @@ export default function SuggestionsPage() {
     const updatedItems = draft.selected.filter(i => i.code !== code)
     const results = runQuickRules({ notes: draft.notes || soapNotes, items: updatedItems })
     setQuickRules(results)
+    validateSelection(updatedItems.map(i => i.code))
   }
+
+  // Re-validate on selected changes (e.g., persisted draft restored)
+  useEffect(() => {
+    const codes = draft.selected.map(i => i.code)
+    if (codes.length > 0) validateSelection(codes)
+    else { setSelectionBlocked(false); setSelectionWarnings([]) }
+  }, [draft.selected])
 
   // Quick compliance status for UI
   const quickStatus = useMemo(() => {
@@ -128,6 +166,8 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
 
       const data: SuggestResponse = await response.json()
       setSuggestions(data.candidates || [])
+      setCandidates((data.candidates as any) || [])
+      setNote(soapNotes.trim())
       setShowSuggestions(true)
     } catch (err: any) {
       console.error('Error getting suggestions:', err)
@@ -240,15 +280,13 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
                           <div className="flex items-center space-x-4 mt-3 text-xs text-gray-500">
                             <div className="flex items-center">
                               <div className={`w-2 h-2 rounded-full mr-1 ${
-                                suggestion.score > 0.75 ? 'bg-green-400' : suggestion.score > 0.4 ? 'bg-yellow-400' : 'bg-red-400'
+                                (suggestion.confidence ?? suggestion.score) > 0.75 ? 'bg-green-400' : (suggestion.confidence ?? suggestion.score) > 0.4 ? 'bg-yellow-400' : 'bg-red-400'
                               }`}></div>
-                              <span>Score: {(suggestion.score).toFixed(3)}</span>
+                              <span>Confidence: {Math.round(100 * (suggestion.confidence ?? suggestion.score))}%</span>
                             </div>
-                            {suggestion.score_breakdown && Object.entries(suggestion.score_breakdown).map(([key, value]) => (
-                              <div key={key} className="flex items-center">
-                                <span>{key}: {(value).toFixed(3)}</span>
-                              </div>
-                            ))}
+                            <div className="flex items-center">
+                              <span>Semantic: {((suggestion.score_breakdown?.bm25 ?? suggestion.score) as number).toFixed(3)}</span>
+                            </div>
                           </div>
                         </div>
                         
@@ -264,13 +302,13 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
                             <ArrowPathIcon className="h-3 w-3 mr-1" />
                             Swap
                           </button>
-                          <button 
-                            onClick={() => setExpandedExplain(expandedExplain === suggestion.code ? null : suggestion.code)}
+                          <Link
+                            href={`/suggestions/${encodeURIComponent(suggestion.code)}`}
                             className="bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs px-3 py-1 rounded-md flex items-center"
                           >
                             <InformationCircleIcon className="h-3 w-3 mr-1" />
                             Explain
-                          </button>
+                          </Link>
                         </div>
                       </div>
                       
@@ -316,6 +354,20 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
                 </div>
               ) : (
                 <div className="space-y-3">
+                  {/* Blocking banner from server-side rule engine */}
+                  {selectionBlocked && (
+                    <div className="p-3 rounded-lg border bg-red-50 border-red-200">
+                      <div className="text-sm font-medium text-red-800 mb-1">Conflicts detected — selection is blocked</div>
+                      <ul className="list-disc ml-5 text-xs text-red-700 space-y-1">
+                        {selectionWarnings.slice(0, 3).map((w, idx) => (
+                          <li key={idx}>{w}</li>
+                        ))}
+                      </ul>
+                      {selectionWarnings.length > 3 && (
+                        <div className="text-xs text-red-600 mt-1">+{selectionWarnings.length - 3} more</div>
+                      )}
+                    </div>
+                  )}
                   {draft.selected.map((item) => (
                     <div key={item.code} className="bg-gray-50 rounded-lg p-3">
                       <div className="flex items-start justify-between">
@@ -371,12 +423,21 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
                     </div>
                   )}
                   
-                  <Link
-                    href="/claim-builder"
-                    className="btn-primary w-full mt-4 flex justify-center"
-                  >
-                    Proceed to Claim
-                  </Link>
+                  {selectionBlocked ? (
+                    <button
+                      disabled
+                      className="btn-primary w-full mt-4 opacity-50 cursor-not-allowed"
+                    >
+                      Resolve Conflicts to Proceed
+                    </button>
+                  ) : (
+                    <Link
+                      href="/claim-builder"
+                      className="btn-primary w-full mt-4 flex justify-center"
+                    >
+                      Proceed to Claim
+                    </Link>
+                  )}
 
                   {/* Draft Controls */}
                   <div className="mt-4 pt-4 border-t border-gray-200">

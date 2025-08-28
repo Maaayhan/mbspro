@@ -86,18 +86,6 @@
         "functions": 0,
         "lines": 0,
         "statements": 0
-      },
-      "./suggest/signal-extractor.service.ts": {
-        "branches": 0.7,
-        "functions": 0.7,
-        "lines": 0.7,
-        "statements": 0.7
-      },
-      "./suggest/ranker.service.ts": {
-        "branches": 0.7,
-        "functions": 0.7,
-        "lines": 0.7,
-        "statements": 0.7
       }
     }
   }
