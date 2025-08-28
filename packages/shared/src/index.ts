@@ -54,6 +54,49 @@ export interface SuggestResponse {
   signals?: Signals;
 }
 
+// Document generation types
+export interface SelectedItem {
+  code: string;
+  title: string;
+  fee?: string;
+  description?: string;
+}
+
+export interface GenerateDocRequest {
+  docType: 'referral' | 'care_plan';
+  patientId: string;
+  practitionerId: string;
+  clinicalNotes: string;
+  selectedItems: SelectedItem[];
+  extras?: Record<string, any>;
+}
+
+export interface GenerateDocResponse {
+  title: string;
+  meta: Record<string, any>;
+  body_markdown: string;
+  summary?: string;
+}
+
+// Patient and Practitioner types
+export interface Patient {
+  id: string;
+  full_name: string;
+  gender?: string;
+  dob?: string;
+  medicare_number?: string;
+  phone?: string;
+  address?: string;
+}
+
+export interface Practitioner {
+  id: string;
+  full_name: string;
+  specialty?: string;
+  hpii?: string;
+  phone?: string;
+}
+
 // Rule processing types
 export interface RuleResult {
   id: string;

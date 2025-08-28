@@ -3,7 +3,10 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import AppLayout from '@/components/AppLayout'
+import DocumentViewer from '@/components/DocumentViewer'
 import { useClaimDraft } from '@/store/useClaimDraft'
+import { usePatients, usePractitioners } from '@/hooks/useSupabaseData'
+import { useDocumentGeneration } from '@/hooks/useDocumentGeneration'
 import { 
   CheckCircleIcon, 
   ExclamationTriangleIcon,
@@ -13,6 +16,7 @@ import {
   ClipboardDocumentListIcon,
   SparklesIcon
 } from '@heroicons/react/24/outline'
+import type { GenerateDocResponse } from '@mbspro/shared'
 
 // Types
 interface ClaimItem {
@@ -35,6 +39,31 @@ export default function ClaimBuilderPage() {
   const { draft, clear } = useClaimDraft()
   const [selectedPatient, setSelectedPatient] = useState('')
   const [selectedProvider, setSelectedProvider] = useState('')
+  
+  // Document generation state
+  const [generatedDoc, setGeneratedDoc] = useState<GenerateDocResponse | null>(null)
+  const [showDocViewer, setShowDocViewer] = useState(false)
+  
+  // Loading states for different document types
+  const [referralLoading, setReferralLoading] = useState(false)
+  const [carePlanLoading, setCarePlanLoading] = useState(false)
+  
+  // Data hooks
+  const { patients, loading: patientsLoading } = usePatients()
+  const { practitioners, loading: practitionersLoading } = usePractitioners()
+  const { generateDocument, loading: docLoading, error: docError } = useDocumentGeneration({
+    onSuccess: (doc) => {
+      setGeneratedDoc(doc)
+      setShowDocViewer(true)
+      setReferralLoading(false)
+      setCarePlanLoading(false)
+    },
+    onError: (error) => {
+      alert(`Failed to generate document: ${error}`)
+      setReferralLoading(false)
+      setCarePlanLoading(false)
+    }
+  })
 
   // Check for expired draft on mount
   useEffect(() => {
@@ -162,6 +191,48 @@ export default function ClaimBuilderPage() {
     }
   }
 
+  const handleGenerateDocument = async (docType: 'referral' | 'care_plan') => {
+    if (!selectedPatient || !selectedProvider) {
+      alert('Please select a patient and provider')
+      return
+    }
+
+    if (!draft.notes) {
+      alert('请添加临床笔记')
+      return
+    }
+
+    if (draft.selected.length === 0) {
+      alert('请选择至少一个 MBS 项目')
+      return
+    }
+
+    // Reset loading states and set the specific loading state
+    setReferralLoading(docType === 'referral')
+    setCarePlanLoading(docType === 'care_plan')
+
+    try {
+      await generateDocument({
+        docType,
+        patientId: selectedPatient,
+        practitionerId: selectedProvider,
+        clinicalNotes: draft.notes,
+        selectedItems: draft.selected.map(item => ({
+          code: item.code,
+          title: item.title,
+          fee: item.fee,
+          description: item.description
+        })),
+        extras: {}
+      })
+    } catch (error) {
+      console.error('Document generation error:', error)
+      alert(`Document generation failed: ${error}`)
+      setReferralLoading(false)
+      setCarePlanLoading(false)
+    }
+  };
+
   return (
     <AppLayout>
       <div className="max-w-7xl mx-auto space-y-6">
@@ -172,13 +243,41 @@ export default function ClaimBuilderPage() {
             <p className="text-gray-600">Review and finalize your Medicare claim</p>
           </div>
           <div className="flex space-x-3">
-            <button className="btn-secondary flex items-center">
+            <button 
+              onClick={() => handleGenerateDocument('referral')}
+              disabled={referralLoading}
+              className="btn-secondary flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <DocumentTextIcon className="mr-2 h-4 w-4" />
-              Generate Referral
+              {referralLoading ? (
+                <div className="flex items-center">
+                  <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Generating...
+                </div>
+              ) : (
+                'Generate Referral'
+              )}
             </button>
-            <button className="btn-secondary flex items-center">
+            <button 
+              onClick={() => handleGenerateDocument('care_plan')}
+              disabled={carePlanLoading}
+              className="btn-secondary flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <ClipboardDocumentListIcon className="mr-2 h-4 w-4" />
-              Generate Care Plan
+              {carePlanLoading ? (
+                <div className="flex items-center">
+                  <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Generating...
+                </div>
+              ) : (
+                'Generate Care Plan'
+              )}
             </button>
           </div>
         </div>
@@ -190,7 +289,7 @@ export default function ClaimBuilderPage() {
             {draft.notes && (
               <div className="card">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Clinical Notes (from Suggestions)</h2>
+                  <h2 className="text-lg font-semibold text-gray-900">Your Clinical Notes</h2>
                   <Link
                     href="/suggestions"
                     className="text-primary-600 hover:text-primary-700 text-sm font-medium"
@@ -214,12 +313,18 @@ export default function ClaimBuilderPage() {
                   <select 
                     value={selectedPatient}
                     onChange={(e) => setSelectedPatient(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                    disabled={patientsLoading}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
-                    <option value="">Select patient...</option>
-                    <option value="john-patterson">John Patterson (Medicare: 2123456781)</option>
-                    <option value="mary-wilson">Mary Wilson (Medicare: 3234567892)</option>
-                    <option value="david-brown">David Brown (Medicare: 4345678903)</option>
+                    <option value="">
+                      {patientsLoading ? 'Loading patients...' : 'Select patient...'}
+                    </option>
+                    {patients.map((patient) => (
+                      <option key={patient.id} value={patient.id}>
+                        {patient.full_name} 
+                        {patient.medicare_number && ` (Medicare: ${patient.medicare_number})`}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 
@@ -228,12 +333,18 @@ export default function ClaimBuilderPage() {
                   <select 
                     value={selectedProvider}
                     onChange={(e) => setSelectedProvider(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                    disabled={practitionersLoading}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
-                    <option value="">Select provider...</option>
-                    <option value="dr-smith">Dr. Sarah Smith (Provider: GP12345)</option>
-                    <option value="dr-jones">Dr. Michael Jones (Provider: GP12346)</option>
-                    <option value="dr-davis">Dr. Emily Davis (Provider: GP12347)</option>
+                    <option value="">
+                      {practitionersLoading ? 'Loading practitioners...' : 'Select provider...'}
+                    </option>
+                    {practitioners.map((practitioner) => (
+                      <option key={practitioner.id} value={practitioner.id}>
+                        {practitioner.full_name}
+                        {practitioner.specialty && ` (${practitioner.specialty})`}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -395,6 +506,28 @@ export default function ClaimBuilderPage() {
             </div>
           </div>
         </div>
+
+        {/* Document Viewer Modal */}
+        {generatedDoc && (
+          <DocumentViewer
+            document={generatedDoc}
+            isOpen={showDocViewer}
+            onClose={() => setShowDocViewer(false)}
+          />
+        )}
+
+        {/* Error Display */}
+        {docError && (
+          <div className="fixed bottom-4 right-4 max-w-md bg-red-50 border border-red-200 rounded-lg p-4 shadow-lg">
+            <div className="flex items-start">
+              <XCircleIcon className="h-5 w-5 text-red-400 mt-0.5 mr-3 flex-shrink-0" />
+              <div>
+                <h3 className="text-sm font-medium text-red-800">Document Generation Failed</h3>
+                <p className="text-sm text-red-700 mt-1">{docError}</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AppLayout>
   )

@@ -91,7 +91,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             <div className="flex items-center space-x-2">
               <UserCircleIcon className="h-8 w-8 text-gray-400" />
               <div className="text-sm">
-                <div className="font-medium text-gray-900">Dr. Smith</div>
+                <div className="font-medium text-gray-900">Dr. Johnson</div>
                 <div className="text-gray-500">General Practice</div>
               </div>
             </div>
