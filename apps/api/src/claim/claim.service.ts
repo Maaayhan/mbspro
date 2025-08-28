@@ -131,56 +131,93 @@ export class ClaimService {
     return { claim, hapi: created };
   }
 
-  /** Automatically create Encounter + Claim transaction bundle (recommended for demo) */
+  /** Automatically create Encounter + Claim transaction bundle  */
   async submitBundle(dto: SubmitBundleDto) {
-    if (!dto.selected?.length) {
+    if (!dto.selected?.length)
       throw new BadRequestException("selected items must not be empty");
-    }
-    const currency = dto.currency ?? "AUD";
 
-    // Build Encounter
+    const currency = dto.currency ?? "AUD";
+    const entries: any[] = [];
+
+    // 1) Patient：可选 + 事务内 upsert
+    let patientRef = dto.patientId;
+    if (!patientRef) {
+      const patientUrn = generateFullUrl("Patient", 0);
+      const patientMrn = "DEMO-PAT-001";
+      entries.push({
+        fullUrl: patientUrn,
+        resource: {
+          resourceType: "Patient",
+          identifier: [{ system: "urn:mrn", value: patientMrn }],
+          name: [{ family: "Demo", given: ["Patient"] }],
+        },
+        request: {
+          method: "POST",
+          url: "Patient",
+          ifNoneExist: `identifier=urn:mrn|${patientMrn}`,
+        },
+      });
+      patientRef = patientUrn; // 用 URN 引用
+    }
+
+    // 2) Practitioner：⭐ 新增：若不是直接引用(URN/Resource/id/URL)，则在事务中 upsert
+    let practitionerRef = dto.practitionerId;
+    const isDirectRef =
+      /^urn:/i.test(practitionerRef) ||
+      practitionerRef.includes("/") ||
+      /^https?:\/\//i.test(practitionerRef);
+
+    if (!isDirectRef) {
+      const pracUrn = generateFullUrl("Practitioner", 0); // URN 只要字符串不同即可
+      entries.push({
+        fullUrl: pracUrn,
+        resource: {
+          resourceType: "Practitioner",
+          identifier: [{ system: "urn:prac", value: practitionerRef }],
+          name: [{ family: "Demo", given: [practitionerRef] }],
+        },
+        request: {
+          method: "POST",
+          url: "Practitioner",
+          ifNoneExist: `identifier=urn:prac|${practitionerRef}`,
+        },
+      });
+      practitionerRef = pracUrn; // 用 URN 引用，避免 external reference
+    }
+
+    // 3) Encounter：用 URN 引用的 Patient/Practitioner
+    const encounterRef = generateFullUrl("Encounter", 0);
     const encounter = buildEncounter(
       dto.encounter,
-      dto.patientId,
-      dto.practitionerId
+      patientRef!,
+      practitionerRef!
     );
+    entries.push({ fullUrl: encounterRef, resource: encounter });
 
-    // Generate UUID reference for Encounter
-    const encounterRef = generateFullUrl("Encounter", 0);
-
-    // Get MBS metadata
+    // 4) Claim items/notes/total
     const codes = dto.selected.map((s) => s.code);
     const metaMap = await this.getMbsMetadata(codes);
-
-    // Build Claim items
     const items = this.buildClaimItems(dto.selected, metaMap, currency);
-
-    // Calculate total price
     const total = items.reduce(
-      (sum, item) => sum + (item.unitPrice?.value || 0),
+      (sum, it) => sum + (it.unitPrice?.value || 0),
       0
     );
-
-    // Build notes
     const notes = this.buildClaimNotes(dto.meta);
 
-    // Use FHIR builder to build Claim
+    // 5) Claim：同样引用 URN encounter/patient/practitioner（buildClaim 已支持 toRef）
     const claim = buildClaim({
-      patientId: dto.patientId,
-      practitionerId: dto.practitionerId,
-      encounterId: encounterRef, // Use UUID reference
+      patientId: patientRef!,
+      practitionerId: practitionerRef!,
+      encounterId: encounterRef,
       items,
       total: this.money(total, currency),
-      notes: notes.length > 0 ? notes : undefined,
+      notes: notes.length ? notes : undefined,
+      status: "active",
     });
+    entries.push({ resource: claim });
 
-    // Build transaction bundle
-    const bundle = buildTransactionBundle([
-      { fullUrl: encounterRef, resource: encounter },
-      { resource: claim },
-    ]);
-
-    const created = await postBundle(bundle);
+    const bundle = buildTransactionBundle(entries);
+    const created = await postBundle(bundle); // 这里会直接 POST 到 /fhir/
     return { claim, bundle, hapi: created };
   }
 
