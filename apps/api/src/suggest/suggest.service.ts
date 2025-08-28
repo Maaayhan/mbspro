@@ -7,6 +7,7 @@ import { RankerService } from './ranker.service';
 import { ExplainService } from './explain.service';
 import { RuleEngineService } from './rule-engine.service';
 import { RagService } from '../rag/rag.service';
+import { MetricsService } from '../mbs/metrics.service';
 
 @Injectable()
 export class SuggestService {
@@ -18,6 +19,7 @@ export class SuggestService {
     private readonly explainer: ExplainService,
     private readonly rules: RuleEngineService,
     private readonly rag: RagService,
+    private readonly metrics: MetricsService,
   ) {}
 
   async suggest(request: SuggestRequestDto): Promise<SuggestResponseDto> {
@@ -37,7 +39,9 @@ export class SuggestService {
           rows = (rag as any).results.map((r: any) => ({
             code: (r.itemNum || (Array.isArray(r.itemNums) ? (r.itemNums[0] || '') : '')),
             title: r.title || '',
-            description: r.match_reason || '',
+            description: r.description || '',
+            match_reason: r.match_reason || '',
+            fee: r.fee ? parseFloat(String(r.fee).replace(/[^0-9.]/g, '')) : 0,
             flags: {},
             time_threshold: undefined,
             bm25: typeof r.match_score === 'number' ? Math.max(0, Math.min(1, r.match_score)) : 0,
@@ -51,7 +55,8 @@ export class SuggestService {
         code: r.code,
         title: r.title,
         description: r.description,
-        fee: 0,
+        match_reason: r.match_reason,
+        fee: r.fee || 0,
         time_threshold: r.time_threshold,
         flags: r.flags,
         mutually_exclusive_with: (r as any).mutually_exclusive_with || [],
@@ -90,6 +95,22 @@ export class SuggestService {
             now_iso: new Date().toISOString(),
           },
         });
+        
+        // Add fee to feature_hits
+        const featureHits = [...(c.feature_hits || [])];
+        if (original?.fee && original.fee > 0) {
+          featureHits.push(`Fee: $${original.fee.toFixed(2)}`);
+        }
+        
+        const result = { 
+          ...c, 
+          feature_hits: featureHits,
+          short_explain: original?.match_reason || c.short_explain || '',
+          rule_results: ruleResults, 
+          compliance 
+        };
+        
+        return result;
         const riskBanner = compliance;
         // Apply penalties to score (clamped)
         const baseSim = Math.max(0, Math.min(1, (c.score ?? 0) - (penalties ?? 0)));
@@ -149,11 +170,12 @@ export class SuggestService {
         },
       };
 
+      this.metrics.recordRequest(Date.now() - started, { lowConfidence: (response.candidates || []).some(c => (c.confidence ?? c.score ?? 1) < 0.35) });
       return response;
     } catch (error) {
       this.logger.error('Error in suggest service:', error);
       const fallback: SuggestCandidate[] = [];
-      return {
+      const resp = {
         candidates: fallback,
         signals: {
           duration: Date.now() - started,
@@ -162,6 +184,8 @@ export class SuggestService {
           chronic: false,
         },
       };
+      this.metrics.recordRequest(Date.now() - started, { lowConfidence: true });
+      return resp;
     }
   }
 }
