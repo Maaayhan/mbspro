@@ -9,6 +9,7 @@ import { RuleEngineService } from './rule-engine.service';
 import { RagModule } from '../rag/rag.module';
 import { MetricsService } from '../mbs/metrics.service';
 import { LexicalRetrieverService } from '../mbs/retriever.service';
+import { RulesService } from '../rules/rules.service';
 
 @Module({
   imports: [RagModule],
@@ -22,6 +23,7 @@ import { LexicalRetrieverService } from '../mbs/retriever.service';
     RuleEngineService,
     MetricsService,
     LexicalRetrieverService,
+    RulesService,
   ],
 })
 export class SuggestModule {}

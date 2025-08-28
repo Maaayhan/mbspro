@@ -6,6 +6,7 @@ import AppLayout from '@/components/AppLayout'
 import { useClaimDraft } from '@/store/useClaimDraft'
 import { runQuickRules } from '@/lib/quickRules'
 import { useSuggestResults } from '@/store/useSuggestResults'
+import SwapPanel from '@/components/SwapPanel'
 import { 
   MicrophoneIcon, 
   SparklesIcon,
@@ -50,6 +51,7 @@ export default function SuggestionsPage() {
   const [expandedExplain, setExpandedExplain] = useState<string | null>(null)
   const [selectionBlocked, setSelectionBlocked] = useState(false)
   const [selectionWarnings, setSelectionWarnings] = useState<string[]>([])
+  const [swapFor, setSwapFor] = useState<{ code: string; title: string } | null>(null)
 
   // Initialize notes from draft and check for expired draft
   useEffect(() => {
@@ -288,7 +290,9 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
                             <CheckCircleIcon className="h-3 w-3 mr-1" />
                             Accept
                           </button>
-                          <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-3 py-1 rounded-md flex items-center">
+                          <button 
+                            onClick={() => setSwapFor({ code: suggestion.code, title: suggestion.title })}
+                            className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-3 py-1 rounded-md flex items-center">
                             <ArrowPathIcon className="h-3 w-3 mr-1" />
                             Swap
                           </button>
@@ -444,6 +448,30 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
           </div>
         </div>
       </div>
+      {swapFor && (
+        <SwapPanel 
+          open={!!swapFor}
+          onClose={() => setSwapFor(null)}
+          code={swapFor.code}
+          title={swapFor.title}
+          note={soapNotes}
+          selectedCodes={draft.selected.map(i => i.code)}
+          onReplace={(alt, opts) => {
+            // Replace: remove same-family or conflicting codes if requested, then add alt
+            const removeCodes = new Set<string>()
+            if (opts?.removeConflicts && alt.selection?.conflicts) {
+              alt.selection.conflicts.forEach((c:any)=> { removeCodes.add(String(c.code)); c.with.forEach((w:string)=> removeCodes.add(String(w))) })
+            }
+            removeCodes.add(swapFor.code)
+            const kept = draft.selected.filter(i => !removeCodes.has(i.code))
+            const newItem = { code: alt.code, title: alt.title, fee: String(alt.fee ?? '0.00'), description: alt.title, score: 0 }
+            // reuse existing actions
+            kept.forEach(()=>{})
+            addItem(newItem as any)
+            setSwapFor(null)
+          }}
+        />
+      )}
     </AppLayout>
   )
 }

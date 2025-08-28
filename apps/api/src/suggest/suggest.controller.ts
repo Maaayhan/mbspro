@@ -68,4 +68,24 @@ export class SuggestController {
     if (warns.length) summary += `Warnings: ${warns.slice(0,3).map((r:any)=>r.id).join(', ')}. `
     return { ok: true, text: summary.trim() }
   }
+
+  @Post('alternatives')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get swap alternatives for a code under current context' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        note: { type: 'string' },
+        currentCode: { type: 'string' },
+        selectedCodes: { type: 'array', items: { type: 'string' } },
+        context: { type: 'object' },
+        topN: { type: 'number' }
+      },
+      required: ['note', 'currentCode']
+    }
+  })
+  async alternatives(@Body() body: any) {
+    return this.suggestService.alternatives(body);
+  }
 }

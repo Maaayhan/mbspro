@@ -44,6 +44,15 @@ export class RuleEngineService {
     this.loadNormalizedRules();
   }
 
+  // Expose normalized rules/item facts for other services (read-only)
+  getNormalizedByCode(code: string): any | undefined {
+    return this.rulesByCode.get(String(code));
+  }
+
+  listAllNormalized(): any[] {
+    return Array.from(this.rulesByCode.values());
+  }
+
   private loadNormalizedRules(): void {
     try {
       const rulesPath = process.env.MBS_RULES_JSON || path.resolve(__dirname, 'mbs_rules.normalized.json');
