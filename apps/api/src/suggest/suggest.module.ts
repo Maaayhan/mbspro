@@ -9,10 +9,11 @@ import { RuleEngineService } from './rule-engine.service';
 import { RagModule } from '../rag/rag.module';
 import { VapiService } from './vapi.service';
 import { VapiController } from './vapi.controller';
+import { PatientsController } from './patients.controller';
 
 @Module({
   imports: [RagModule],
-  controllers: [SuggestController, VapiController],
+  controllers: [SuggestController, VapiController, PatientsController],
   providers: [
     SuggestService,
     SupabaseService,

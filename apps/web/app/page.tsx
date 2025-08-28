@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { SuggestRequest, SuggestResponse, RagRequest, RagResponse, RagResult, SuggestCandidate } from '@mbspro/shared'
 import VoiceTranscribeButton from '../components/VoiceTranscribeButton'
+import PatientSelector from '../components/PatientSelector'
 
 // Convert RAG API response to our internal format
 const convertRagToSuggest = (ragResponse: RagResponse): SuggestResponse => {
@@ -58,6 +59,7 @@ export default function HomePage() {
   const [mbsError, setMbsError] = useState<string | null>(null)
   const [metrics, setMetrics] = useState<any | null>(null)
   const [reloading, setReloading] = useState(false)
+  const [selectedPatient, setSelectedPatient] = useState<any>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -83,7 +85,21 @@ export default function HomePage() {
       if (source === 'local') {
         // Call local suggest pipeline
         const suggestUrl = `${apiBase}/api/suggest`
-        const body: SuggestRequest = { note: note.trim(), topN: topN > 0 ? topN : 5 }
+        const body: SuggestRequest = { 
+          note: note.trim(), 
+          topN: topN > 0 ? topN : 5,
+          // Include patient context for rule engine
+          ...(selectedPatient && {
+            selectedCodes: selectedPatient.selected_codes,
+            lastClaimedItems: selectedPatient.last_claimed_items,
+            providerType: selectedPatient.provider_type,
+            location: selectedPatient.location,
+            referralPresent: selectedPatient.referral_present,
+            consultStart: selectedPatient.consult_start,
+            consultEnd: selectedPatient.consult_end,
+            hoursBucket: selectedPatient.hours_bucket
+          })
+        }
         const res = await fetch(suggestUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -136,6 +152,7 @@ export default function HomePage() {
     setValidateError(null)
     setMbs(null)
     setMbsError(null)
+    setSelectedPatient(null)
   }
 
   const toggleSelect = (code: string) => {
@@ -268,6 +285,12 @@ export default function HomePage() {
         </p>
       </div>
 
+      {/* Patient Selector */}
+      <PatientSelector 
+        onPatientChange={setSelectedPatient}
+        selectedPatient={selectedPatient}
+      />
+
       {/* Top Risk Banner + Actions */}
       {response && (
         <div className="max-w-4xl mx-auto">
@@ -304,6 +327,37 @@ export default function HomePage() {
 
       {/* Input Form */}
       <div className="card max-w-4xl mx-auto">
+        {/* Patient Context Indicator */}
+        {selectedPatient ? (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span className="text-sm font-medium text-blue-800">
+                  Using patient context: {selectedPatient.name}
+                </span>
+              </div>
+              <div className="text-xs text-blue-600">
+                {selectedPatient.selected_codes.length > 0 && `Selected: ${selectedPatient.selected_codes.join(', ')}`}
+                {selectedPatient.last_claimed_items.length > 0 && ` • History: ${selectedPatient.last_claimed_items.length} items`}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <svg className="h-5 w-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <span className="text-sm font-medium text-yellow-800">
+                No patient selected - rule engine will use default context
+              </span>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label htmlFor="clinical-note" className="form-label">
@@ -393,7 +447,8 @@ Example:
               <button
                 type="submit"
                 className="btn-primary"
-                disabled={loading || !note.trim()}
+                disabled={loading || !note.trim() || !selectedPatient}
+                title={!selectedPatient ? "Please select a patient first" : ""}
               >
                 {loading ? (
                   <span className="flex items-center">
@@ -403,6 +458,8 @@ Example:
                     </svg>
                     Getting Suggestions...
                   </span>
+                ) : !selectedPatient ? (
+                  'Select Patient First'
                 ) : (
                   'Get Suggestions'
                 )}
