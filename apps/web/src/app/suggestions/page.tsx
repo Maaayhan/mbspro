@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import AppLayout from '@/components/AppLayout'
+import { useClaimDraft } from '@/store/useClaimDraft'
+import { runQuickRules } from '@/lib/quickRules'
 import { 
   MicrophoneIcon, 
   SparklesIcon,
@@ -36,13 +38,62 @@ interface SuggestResponse {
 }
 
 export default function SuggestionsPage() {
+  const { draft, setNotes, addItem, removeItem, setQuickRules, clear } = useClaimDraft()
   const [soapNotes, setSoapNotes] = useState('')
-  const [selectedItems, setSelectedItems] = useState<SuggestCandidate[]>([])
   const [suggestions, setSuggestions] = useState<SuggestCandidate[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [expandedExplain, setExpandedExplain] = useState<string | null>(null)
+
+  // Initialize notes from draft and check for expired draft
+  useEffect(() => {
+    if (draft.meta?.updatedAt) {
+      const threeDaysAgo = Date.now() - 3 * 24 * 60 * 60 * 1000
+      if (draft.meta.updatedAt < threeDaysAgo) {
+        clear() // Auto-clear expired draft
+      } else {
+        setSoapNotes(draft.notes || '')
+      }
+    }
+  }, [draft.meta?.updatedAt, draft.notes, clear])
+
+  // Handle notes change: update both local state and global draft
+  const onNotesChange = (v: string) => {
+    setSoapNotes(v)
+    setNotes(v)
+  }
+
+  // Handle Accept: add to global draft and run quick rules
+  const handleAccept = (s: SuggestCandidate) => {
+    const newItem = { 
+      code: s.code, 
+      title: s.title, 
+      fee: s.feature_hits?.find(f => f.startsWith('Fee:'))?.replace('Fee: $', '') || '0.00',
+      description: s.title,
+      score: s.score
+    }
+    addItem(newItem)
+    const updatedItems = [...draft.selected, newItem]
+    const results = runQuickRules({ notes: draft.notes || soapNotes, items: updatedItems })
+    setQuickRules(results)
+  }
+
+  // Handle Remove: remove from global draft and re-run quick rules
+  const handleRemove = (code: string) => {
+    removeItem(code)
+    const updatedItems = draft.selected.filter(i => i.code !== code)
+    const results = runQuickRules({ notes: draft.notes || soapNotes, items: updatedItems })
+    setQuickRules(results)
+  }
+
+  // Quick compliance status for UI
+  const quickStatus = useMemo(() => {
+    if (!draft.quickRules?.length) return null
+    const hasFail = draft.quickRules.some(r => r.status === 'fail')
+    const hasWarn = draft.quickRules.some(r => r.status === 'warning')
+    return hasFail ? 'red' : hasWarn ? 'amber' : 'green'
+  }, [draft.quickRules])
 
   const sampleSOAP = `S: 45-year-old patient presents with chest pain and shortness of breath for 2 days. Pain is sharp, worse with deep breathing. No fever, no cough. History of hypertension.
 
@@ -86,20 +137,9 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
     }
   }
 
-  const addToSelected = (item: SuggestCandidate) => {
-    if (!selectedItems.find(selected => selected.code === item.code)) {
-      setSelectedItems([...selectedItems, item])
-    }
-  }
-
-  const removeFromSelected = (code: string) => {
-    setSelectedItems(selectedItems.filter(item => item.code !== code))
-  }
-
   const getTotalFee = () => {
-    return selectedItems.reduce((total, item) => {
-      const feeTag = item.feature_hits?.find(f => f.startsWith('Fee:'))
-      const fee = feeTag ? parseFloat(feeTag.replace('Fee: $', '')) : 0
+    return draft.selected.reduce((total, item) => {
+      const fee = item.fee ? parseFloat(item.fee) : 0
       return total + fee
     }, 0).toFixed(2)
   }
@@ -122,7 +162,7 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
               
               <textarea
                 value={soapNotes}
-                onChange={(e) => setSoapNotes(e.target.value)}
+                onChange={(e) => onNotesChange(e.target.value)}
                 placeholder={sampleSOAP}
                 className="w-full h-48 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
               />
@@ -192,11 +232,11 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
                               <div className={`w-2 h-2 rounded-full mr-1 ${
                                 suggestion.score > 0.75 ? 'bg-green-400' : suggestion.score > 0.4 ? 'bg-yellow-400' : 'bg-red-400'
                               }`}></div>
-                              <span>Score: {(suggestion.score).toFixed(2)}</span>
+                              <span>Score: {(suggestion.score).toFixed(3)}</span>
                             </div>
                             {suggestion.score_breakdown && Object.entries(suggestion.score_breakdown).map(([key, value]) => (
                               <div key={key} className="flex items-center">
-                                <span>{key}: {(value).toFixed(2)}</span>
+                                <span>{key}: {(value).toFixed(3)}</span>
                               </div>
                             ))}
                           </div>
@@ -204,7 +244,7 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
                         
                         <div className="flex space-x-2 ml-4">
                           <button
-                            onClick={() => addToSelected(suggestion)}
+                            onClick={() => handleAccept(suggestion)}
                             className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded-md flex items-center"
                           >
                             <CheckCircleIcon className="h-3 w-3 mr-1" />
@@ -259,14 +299,14 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
             <div className="card sticky top-20">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Selected Items</h3>
               
-              {selectedItems.length === 0 ? (
+              {draft.selected.length === 0 ? (
                 <div className="text-center py-8">
                   <ClockIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                   <p className="text-gray-500 text-sm">No items selected yet</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {selectedItems.map((item) => (
+                  {draft.selected.map((item) => (
                     <div key={item.code} className="bg-gray-50 rounded-lg p-3">
                       <div className="flex items-start justify-between">
                         <div className="flex-1 min-w-0">
@@ -275,13 +315,13 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
                               {item.code}
                             </span>
                             <span className="text-sm font-medium text-gray-900">
-                              ${item.feature_hits?.find(f => f.startsWith('Fee:'))?.replace('Fee: $', '') || '0.00'}
+                              ${item.fee || '0.00'}
                             </span>
                           </div>
                           <p className="text-xs text-gray-600 mt-1 truncate">{item.title}</p>
                         </div>
                         <button
-                          onClick={() => removeFromSelected(item.code)}
+                          onClick={() => handleRemove(item.code)}
                           className="text-gray-400 hover:text-red-500 ml-2"
                         >
                           <TrashIcon className="h-4 w-4" />
@@ -296,6 +336,30 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
                       <span className="text-lg font-semibold text-gray-900">${getTotalFee()}</span>
                     </div>
                   </div>
+
+                  {/* Quick Compliance Check */}
+                  {draft.quickRules?.length > 0 && (
+                    <div className={`mt-4 p-3 rounded-lg border ${quickStatus === 'green'
+                        ? 'bg-green-50 border-green-200'
+                        : quickStatus === 'amber'
+                        ? 'bg-yellow-50 border-yellow-200'
+                        : 'bg-red-50 border-red-200'
+                      }`}>
+                      <div className="text-sm font-medium text-gray-900 mb-2">
+                        Compliance (Quick Check)
+                      </div>
+                      <ul className="space-y-1 text-xs">
+                        {draft.quickRules.map((r) => (
+                          <li key={r.id} className="flex items-start">
+                            <span className={`mt-1 mr-2 inline-block w-2 h-2 rounded-full ${
+                              r.status === 'ok' ? 'bg-green-500' : r.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'
+                            }`} />
+                            <span className="text-gray-700">{r.id} — {r.name}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   
                   <Link
                     href="/claim-builder"
@@ -303,6 +367,16 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
                   >
                     Proceed to Claim
                   </Link>
+
+                  {/* Draft Controls */}
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <button
+                      onClick={clear}
+                      className="w-full text-center text-sm text-red-600 hover:text-red-700 py-1"
+                    >
+                      🗑️ Clear Draft
+                    </button>
+                  </div>
                 </div>
               )}
               

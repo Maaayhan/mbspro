@@ -1,14 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import AppLayout from '@/components/AppLayout'
+import { useClaimDraft } from '@/store/useClaimDraft'
 import { 
   CheckCircleIcon, 
   ExclamationTriangleIcon,
   XCircleIcon,
   DocumentDuplicateIcon,
   DocumentTextIcon,
-  ClipboardDocumentListIcon
+  ClipboardDocumentListIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline'
 
 // Types
@@ -29,62 +32,72 @@ interface ComplianceCheck {
 }
 
 export default function ClaimBuilderPage() {
+  const { draft, clear } = useClaimDraft()
   const [selectedPatient, setSelectedPatient] = useState('')
   const [selectedProvider, setSelectedProvider] = useState('')
 
-  const claimItems: ClaimItem[] = [
-    {
-      code: '23',
-      title: 'Consultation - Level A',
-      fee: 41.40,
-      quantity: 1,
-      date: '2024-01-15',
-      modifiers: []
-    },
-    {
-      code: '11700',
-      title: 'Electrocardiography',
-      fee: 26.55,
-      quantity: 1,
-      date: '2024-01-15',
-      modifiers: []
-    },
-    {
-      code: '58503',
-      title: 'Chest X-ray',
-      fee: 73.60,
-      quantity: 1,
-      date: '2024-01-15',
-      modifiers: []
+  // Check for expired draft on mount
+  useEffect(() => {
+    if (draft.meta?.updatedAt) {
+      const threeDaysAgo = Date.now() - 3 * 24 * 60 * 60 * 1000
+      if (draft.meta.updatedAt < threeDaysAgo) {
+        clear() // Auto-clear expired draft
+      }
     }
-  ]
+  }, [draft.meta?.updatedAt, clear])
 
-  const complianceChecks: ComplianceCheck[] = [
-    {
-      category: 'Documentation',
-      status: 'pass',
-      message: 'All required clinical notes are present',
-      details: 'SOAP notes complete with assessment and plan'
-    },
-    {
-      category: 'Time Intervals',
-      status: 'pass',
-      message: 'Appropriate intervals between services',
-      details: 'No conflicts with previous claims'
-    },
-    {
-      category: 'Clinical Indicators',
-      status: 'warning',
-      message: 'Verify chest X-ray clinical justification',
-      details: 'Ensure symptoms support imaging requirement'
-    },
-    {
-      category: 'Patient Demographics',
-      status: 'pass',
-      message: 'Patient age and eligibility confirmed',
-      details: 'Medicare number validated'
-    }
-  ]
+  // Use items from global draft, or empty array if no draft
+  const claimItems: ClaimItem[] = draft.selected.length > 0 
+    ? draft.selected.map(item => ({
+        code: item.code,
+        title: item.title,
+        fee: parseFloat(item.fee || '0'),
+        quantity: 1,
+        date: new Date().toISOString().split('T')[0],
+        modifiers: []
+      }))
+    : []
+
+  // Use quick rules from global draft, or fallback to sample data
+  const complianceChecks: ComplianceCheck[] = draft.quickRules.length > 0
+    ? draft.quickRules.map(rule => ({
+        category: rule.name,
+        status: rule.status === 'ok' ? 'pass' : rule.status,
+        message: rule.reason,
+        details: `Quick check: ${rule.id}`
+      }))
+    : [
+        {
+          category: 'Documentation',
+          status: 'pass',
+          message: 'All required clinical notes are present',
+          details: 'SOAP notes complete with assessment and plan'
+        },
+        {
+          category: 'Time Intervals',
+          status: 'pass',
+          message: 'Appropriate intervals between services',
+          details: 'No conflicts with previous claims'
+        },
+        {
+          category: 'Clinical Indicators',
+          status: 'warning',
+          message: 'Verify chest X-ray clinical justification',
+          details: 'Ensure symptoms support imaging requirement'
+        },
+        {
+          category: 'Patient Demographics',
+          status: 'pass',
+          message: 'Patient age and eligibility confirmed',
+          details: 'Medicare number validated'
+        }
+      ]
+
+  const handleSubmitClaim = () => {
+    // Simulate successful claim submission
+    alert('Claim submitted successfully!')
+    clear() // Clear draft after successful submission
+  }
 
   const generateJSON = () => {
     return JSON.stringify({
@@ -173,6 +186,24 @@ export default function ClaimBuilderPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Clinical Notes Summary */}
+            {draft.notes && (
+              <div className="card">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-gray-900">Clinical Notes (from Suggestions)</h2>
+                  <Link
+                    href="/suggestions"
+                    className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+                  >
+                    ← Back to Suggestions
+                  </Link>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 max-h-32 overflow-y-auto">
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{draft.notes}</p>
+                </div>
+              </div>
+            )}
+
             {/* Patient & Provider Selection */}
             <div className="card">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Patient & Provider Details</h2>
@@ -210,62 +241,85 @@ export default function ClaimBuilderPage() {
 
             {/* Claim Items Table */}
             <div className="card">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Claim Items</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Claim Items</h2>
+                <div className="flex space-x-2">
+                  <Link
+                    href="/suggestions"
+                    className="inline-flex items-center px-3 py-2 border border-primary-600 text-sm font-medium rounded-md text-primary-600 bg-white hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  >
+                    <SparklesIcon className="h-4 w-4 mr-2" />
+                    AI Suggestions
+                  </Link>
+                  <button className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                    <DocumentDuplicateIcon className="h-4 w-4 mr-2" />
+                    Manual Import
+                  </button>
+                </div>
+              </div>
               
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-2 text-sm font-medium text-gray-700">MBS Code</th>
-                      <th className="text-left py-3 px-2 text-sm font-medium text-gray-700">Description</th>
-                      <th className="text-left py-3 px-2 text-sm font-medium text-gray-700">Fee</th>
-                      <th className="text-left py-3 px-2 text-sm font-medium text-gray-700">Qty</th>
-                      <th className="text-left py-3 px-2 text-sm font-medium text-gray-700">Date</th>
-                      <th className="text-left py-3 px-2 text-sm font-medium text-gray-700">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {claimItems.map((item, index) => (
-                      <tr key={index} className="border-b border-gray-100">
-                        <td className="py-3 px-2">
-                          <span className="bg-primary-100 text-primary-800 text-sm font-medium px-2 py-1 rounded">
-                            {item.code}
-                          </span>
+              {claimItems.length === 0 ? (
+                <div className="text-center py-12">
+                  <DocumentDuplicateIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No items selected</h3>
+                  <p className="text-gray-500 mb-4">Go to AI Suggestions or Manual Import to select MBS items for your claim</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-3 px-2 text-sm font-medium text-gray-700">MBS Code</th>
+                        <th className="text-left py-3 px-2 text-sm font-medium text-gray-700">Description</th>
+                        <th className="text-left py-3 px-2 text-sm font-medium text-gray-700">Fee</th>
+                        <th className="text-left py-3 px-2 text-sm font-medium text-gray-700">Qty</th>
+                        <th className="text-left py-3 px-2 text-sm font-medium text-gray-700">Date</th>
+                        <th className="text-left py-3 px-2 text-sm font-medium text-gray-700">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {claimItems.map((item, index) => (
+                        <tr key={index} className="border-b border-gray-100">
+                          <td className="py-3 px-2">
+                            <span className="bg-primary-100 text-primary-800 text-sm font-medium px-2 py-1 rounded">
+                              {item.code}
+                            </span>
+                          </td>
+                          <td className="py-3 px-2 text-sm text-gray-900">{item.title}</td>
+                          <td className="py-3 px-2 text-sm text-gray-900">${item.fee.toFixed(2)}</td>
+                          <td className="py-3 px-2">
+                            <input 
+                              type="number" 
+                              defaultValue={item.quantity} 
+                              className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                          </td>
+                          <td className="py-3 px-2">
+                            <input 
+                              type="date" 
+                              defaultValue={item.date} 
+                              className="px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                          </td>
+                          <td className="py-3 px-2 text-sm font-medium text-gray-900">
+                            ${(item.fee * item.quantity).toFixed(2)}
+                          </td>
+                        </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t-2 border-gray-300">
+                        <td colSpan={7} className="py-3 px-2 text-sm font-medium text-gray-900">
+                          Total Claim Value:
                         </td>
-                        <td className="py-3 px-2 text-sm text-gray-900">{item.title}</td>
-                        <td className="py-3 px-2 text-sm text-gray-900">${item.fee.toFixed(2)}</td>
-                        <td className="py-3 px-2">
-                          <input 
-                            type="number" 
-                            defaultValue={item.quantity} 
-                            className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
-                          />
-                        </td>
-                        <td className="py-3 px-2">
-                          <input 
-                            type="date" 
-                            defaultValue={item.date} 
-                            className="px-2 py-1 border border-gray-300 rounded text-sm"
-                          />
-                        </td>
-                        <td className="py-3 px-2 text-sm font-medium text-gray-900">
-                          ${(item.fee * item.quantity).toFixed(2)}
+                        <td className="py-3 px-2 text-lg font-bold text-gray-900">
+                          ${claimItems.reduce((sum, item) => sum + (item.fee * item.quantity), 0).toFixed(2)}
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="border-t-2 border-gray-300">
-                      <td colSpan={5} className="py-3 px-2 text-sm font-medium text-gray-900">
-                        Total Claim Value:
-                      </td>
-                      <td className="py-3 px-2 text-lg font-bold text-gray-900">
-                        ${claimItems.reduce((sum, item) => sum + (item.fee * item.quantity), 0).toFixed(2)}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
 
@@ -322,11 +376,20 @@ export default function ClaimBuilderPage() {
               </div>
               
               <div className="mt-4 space-y-2">
-                <button className="btn-primary w-full">
+                <button 
+                  onClick={handleSubmitClaim}
+                  className="btn-primary w-full"
+                >
                   Submit Claim
                 </button>
                 <button className="btn-secondary w-full">
                   Save as Draft
+                </button>
+                <button
+                  onClick={clear}
+                  className="w-full text-center text-sm text-red-600 hover:text-red-700 py-2"
+                >
+                  🗑️ Discard Draft
                 </button>
               </div>
             </div>
@@ -348,11 +411,15 @@ export default function ClaimBuilderPage() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Patient Rebate:</span>
-                  <span className="text-sm font-medium text-gray-900">$95.20</span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {claimItems.length > 0 ? '$95.20' : '$0.00'}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Gap Payment:</span>
-                  <span className="text-sm font-medium text-gray-900">$46.35</span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {claimItems.length > 0 ? '$46.35' : '$0.00'}
+                  </span>
                 </div>
               </div>
             </div>
