@@ -74,8 +74,19 @@ export interface ClaimInput {
   };
 }
 
+function toRef(rt: string, idOrRef: string) {
+  if (!idOrRef) return undefined as any;
+  if (
+    /^urn:uuid:/i.test(idOrRef) ||
+    idOrRef.includes("/") ||
+    /^https?:\/\//i.test(idOrRef)
+  ) {
+    return idOrRef; // 已经是 URN/相对/绝对引用
+  }
+  return `${rt}/${idOrRef}`;
+}
+
 export function buildClaim(input: ClaimInput): any {
-  // Build Claim type coding
   const typeCoding = input.type || {
     coding: [
       {
@@ -85,8 +96,6 @@ export function buildClaim(input: ClaimInput): any {
       },
     ],
   };
-
-  // Build priority coding
   const priorityCoding = input.priority || {
     coding: [
       {
@@ -97,27 +106,18 @@ export function buildClaim(input: ClaimInput): any {
     ],
   };
 
-  // Build Claim resource
-  const claim: any = {
+  return {
     resourceType: "Claim",
     status: input.status || "draft",
     type: typeCoding,
     priority: priorityCoding,
-    patient: {
-      reference: `Patient/${input.patientId}`,
-    },
-    provider: {
-      reference: `Practitioner/${input.practitionerId}`,
-    },
-    encounter: {
-      reference: `Encounter/${input.encounterId}`,
-    },
+    patient: { reference: toRef("Patient", input.patientId) },
+    provider: { reference: toRef("Practitioner", input.practitionerId) },
+    encounter: { reference: toRef("Encounter", input.encounterId) },
     item: input.items,
     total: input.total,
-    ...(input.notes && input.notes.length > 0 && { note: input.notes }),
+    ...(input.notes?.length ? { note: input.notes } : {}),
   };
-
-  return claim;
 }
 
 /**

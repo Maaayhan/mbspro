@@ -24,8 +24,12 @@ export class EncounterInputDto {
 }
 
 export class SubmitBundleDto {
-  @IsString() patientId!: string;
-  @IsString() practitionerId!: string;
+  @IsOptional()
+  @IsString()
+  patientId?: string;
+
+  @IsString()
+  practitionerId!: string;
 
   @ValidateNested()
   @Type(() => EncounterInputDto)

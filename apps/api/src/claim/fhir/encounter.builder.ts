@@ -11,6 +11,18 @@ export interface EncounterInput {
   locationDisplay?: string;
 }
 
+function toRef(rt: string, idOrRef: string) {
+  if (!idOrRef) return undefined as any;
+  if (
+    /^urn:uuid:/i.test(idOrRef) ||
+    idOrRef.includes("/") ||
+    /^https?:\/\//i.test(idOrRef)
+  ) {
+    return idOrRef;
+  }
+  return `${rt}/${idOrRef}`;
+}
+
 export function buildEncounter(
   input: EncounterInput,
   patientId: string,
@@ -19,7 +31,6 @@ export function buildEncounter(
   const now = new Date();
   const start = input.start ? new Date(input.start) : now;
 
-  // Calculate end time if duration is provided
   let end: Date | undefined;
   if (input.durationMinutes && input.durationMinutes > 0) {
     end = new Date(start.getTime() + input.durationMinutes * 60 * 1000);
@@ -27,24 +38,18 @@ export function buildEncounter(
     end = new Date(input.end);
   }
 
-  // Build Encounter status
-  const status = "finished"; // Assume completed
-
-  // Build Encounter type coding
+  const status = "finished";
   const typeCoding = {
     system: "http://terminology.hl7.org/CodeSystem/v3-ActCode",
     code: getEncounterTypeCode(input.visitType),
     display: getEncounterTypeDisplay(input.visitType),
   };
-
-  // Build service type coding
   const serviceTypeCoding = {
     system: "http://terminology.hl7.org/CodeSystem/service-type",
     code: "GP_CONSULTATION",
     display: "General Practice Consultation",
   };
 
-  // Build participants
   const participants = [
     {
       type: [
@@ -59,25 +64,17 @@ export function buildEncounter(
           ],
         },
       ],
-      individual: {
-        reference: `Practitioner/${practitionerId}`,
-      },
+      individual: { reference: toRef("Practitioner", practitionerId) },
     },
   ];
 
-  // Build location information
   const location: any[] = [];
   if (input.locationDisplay) {
-    location.push({
-      location: {
-        display: input.locationDisplay,
-      },
-    });
+    location.push({ location: { display: input.locationDisplay } });
   }
 
-  // Build Encounter resource
   const cls = input.visitType === "telehealth" ? "VR" : "AMB";
-  const encounter: any = {
+  return {
     resourceType: "Encounter",
     status,
     class: {
@@ -87,20 +84,15 @@ export function buildEncounter(
     },
     type: [typeCoding],
     serviceType: serviceTypeCoding,
-    subject: {
-      reference: `Patient/${patientId}`,
-    },
+    subject: { reference: toRef("Patient", patientId) }, // ← 用 toRef
     participant: participants,
     period: {
       start: start.toISOString(),
-      ...(end && { end: end.toISOString() }),
+      ...(end ? { end: end.toISOString() } : {}),
     },
-    ...(location.length > 0 && { location }),
+    ...(location.length ? { location } : {}),
   };
-
-  return encounter;
 }
-
 function getEncounterTypeCode(visitType: string): string {
   switch (visitType) {
     case "telehealth":

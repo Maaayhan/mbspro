@@ -9,6 +9,7 @@ export interface BundleEntry {
   request?: {
     method: "POST" | "PUT" | "DELETE";
     url: string;
+    ifNoneExist?: string;
   };
 }
 
@@ -34,33 +35,22 @@ export interface BundleInput {
  * Used for creating or updating multiple FHIR resources
  */
 export function buildTransactionBundle(entries: BundleEntry[]): any {
-  const bundle: any = {
+  return {
     resourceType: "Bundle",
     type: "transaction",
-    entry: entries.map((entry, index) => {
-      const bundleEntry: any = {
-        resource: entry.resource,
-      };
+    entry: entries.map((entry) => {
+      const bundleEntry: any = { resource: entry.resource };
+      if (entry.fullUrl) bundleEntry.fullUrl = entry.fullUrl;
 
-      // Add fullUrl if present
-      if (entry.fullUrl) {
-        bundleEntry.fullUrl = entry.fullUrl;
+      if (entry.request) {
+        bundleEntry.request = entry.request;
+      } else {
+        const rt = entry.resource?.resourceType;
+        bundleEntry.request = { method: "POST", url: rt };
       }
-
-      // Build request section
-      const resourceType = entry.resource.resourceType;
-      if (resourceType) {
-        bundleEntry.request = {
-          method: "POST",
-          url: resourceType,
-        };
-      }
-
       return bundleEntry;
     }),
   };
-
-  return bundle;
 }
 
 /**
