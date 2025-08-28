@@ -240,7 +240,7 @@ export default function DashboardPage() {
     {
       key: "revenue",
       title: "Total Revenue",
-      value: `$${data.kpis.revenue.toLocaleString()}`,
+      value: `$${Math.floor(data.kpis.revenue).toLocaleString()}`,
       change: "+18.2%",
       trend: "up",
       description: "Last 30 days",

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import AppLayout from "@/components/AppLayout";
 import DocumentViewer from "@/components/DocumentViewer";
+import Notification from "@/components/Notification";
 import { useClaimDraft } from "@/store/useClaimDraft";
 import { usePatients, usePractitioners } from "@/hooks/useSupabaseData";
 import { useDocumentGeneration } from "@/hooks/useDocumentGeneration";
@@ -63,6 +64,18 @@ export default function ClaimBuilderPage() {
   const [referralLoading, setReferralLoading] = useState(false);
   const [carePlanLoading, setCarePlanLoading] = useState(false);
 
+  // Notification state
+  const [notification, setNotification] = useState<{
+    isOpen: boolean;
+    type: "success" | "error" | "warning" | "info";
+    title: string;
+    message?: string;
+  }>({
+    isOpen: false,
+    type: "info",
+    title: "",
+  });
+
   // Data hooks
   const { patients, loading: patientsLoading } = usePatients();
   const { practitioners, loading: practitionersLoading } = usePractitioners();
@@ -78,7 +91,12 @@ export default function ClaimBuilderPage() {
       setCarePlanLoading(false);
     },
     onError: (error) => {
-      alert(`Failed to generate document: ${error}`);
+      setNotification({
+        isOpen: true,
+        type: "error",
+        title: "Document Generation Failed",
+        message: `Failed to generate document: ${error}`,
+      });
       setReferralLoading(false);
       setCarePlanLoading(false);
     },
@@ -145,19 +163,40 @@ export default function ClaimBuilderPage() {
 
   const handleSubmitClaim = () => {
     // Simulate successful claim submission
-    alert("Claim submitted successfully!");
-    clear(); // Clear draft after successful submission
+    setNotification({
+      isOpen: true,
+      type: "success",
+      title: "Claim Submitted Successfully!",
+      message: "Your Medicare claim has been submitted and is being processed.",
+    });
+
+    // Clear draft after successful submission
+    setTimeout(() => {
+      clear();
+    }, 1000); // delay 1 second to show the success message
   };
 
   // Function to fetch FHIR data from API
   const fetchFhirData = async () => {
     if (!selectedPatient || !selectedProvider) {
       setFhirError("Please select a patient and provider");
+      setNotification({
+        isOpen: true,
+        type: "warning",
+        title: "Missing Information",
+        message: "Please select a patient and provider to fetch FHIR data",
+      });
       return;
     }
 
     if (claimItems.length === 0) {
       setFhirError("Please select at least one MBS item");
+      setNotification({
+        isOpen: true,
+        type: "warning",
+        title: "Missing Information",
+        message: "Please select at least one MBS item to fetch FHIR data",
+      });
       return;
     }
 
@@ -199,11 +238,27 @@ export default function ClaimBuilderPage() {
 
       const data = await response.json();
       setFhirData(data);
+
+      // Show success notification
+      setNotification({
+        isOpen: true,
+        type: "success",
+        title: "FHIR Data Generated",
+        message: "Claim data has been successfully converted to FHIR format",
+      });
     } catch (error) {
       console.error("FHIR fetch error:", error);
-      setFhirError(
-        error instanceof Error ? error.message : "Failed to fetch FHIR data"
-      );
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to fetch FHIR data";
+      setFhirError(errorMessage);
+
+      // Show error notification
+      setNotification({
+        isOpen: true,
+        type: "error",
+        title: "FHIR Generation Failed",
+        message: errorMessage,
+      });
     } finally {
       setFhirLoading(false);
     }
@@ -293,24 +348,57 @@ export default function ClaimBuilderPage() {
       // Show success feedback
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000); // Reset after 2 seconds
+
+      // Show success notification
+      setNotification({
+        isOpen: true,
+        type: "success",
+        title: "Copied to Clipboard",
+        message: fhirData
+          ? "FHIR data copied successfully"
+          : "JSON data copied successfully",
+      });
     } catch (err) {
       console.error("Failed to copy JSON:", err);
+
+      // Show error notification
+      setNotification({
+        isOpen: true,
+        type: "error",
+        title: "Copy Failed",
+        message: "Failed to copy data to clipboard",
+      });
     }
   };
 
   const handleGenerateDocument = async (docType: "referral" | "care_plan") => {
     if (!selectedPatient || !selectedProvider) {
-      alert("Please select a patient and provider");
+      setNotification({
+        isOpen: true,
+        type: "warning",
+        title: "Missing Information",
+        message: "Please select a patient and provider",
+      });
       return;
     }
 
     if (!draft.notes) {
-      alert("Please add clinical notes");
+      setNotification({
+        isOpen: true,
+        type: "warning",
+        title: "Missing Information",
+        message: "Please add clinical notes",
+      });
       return;
     }
 
     if (draft.selected.length === 0) {
-      alert("Please select at least one MBS item");
+      setNotification({
+        isOpen: true,
+        type: "warning",
+        title: "Missing Information",
+        message: "Please select at least one MBS item",
+      });
       return;
     }
 
@@ -334,7 +422,12 @@ export default function ClaimBuilderPage() {
       });
     } catch (error) {
       console.error("Document generation error:", error);
-      alert(`Document generation failed: ${error}`);
+      setNotification({
+        isOpen: true,
+        type: "error",
+        title: "Document Generation Failed",
+        message: `Document generation failed: ${error}`,
+      });
       setReferralLoading(false);
       setCarePlanLoading(false);
     }
@@ -784,6 +877,17 @@ export default function ClaimBuilderPage() {
             onClose={() => setShowDocViewer(false)}
           />
         )}
+
+        {/* Notification Component */}
+        <Notification
+          type={notification.type}
+          title={notification.title}
+          message={notification.message}
+          isOpen={notification.isOpen}
+          onClose={() => setNotification({ ...notification, isOpen: false })}
+          autoClose={true}
+          autoCloseDelay={5000}
+        />
 
         {/* Error Display */}
         {docError && (

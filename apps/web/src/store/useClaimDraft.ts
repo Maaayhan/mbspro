@@ -1,16 +1,16 @@
-'use client';
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+"use client";
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 export type SelectedItem = {
   code: string;
   title: string;
-  fee?: string;      // "$41.40"
+  fee?: string; // "$41.40"
   description?: string;
-  score?: number;    // optional
+  score?: number; // optional
 };
 
-export type QuickRuleStatus = 'ok' | 'warning' | 'fail';
+export type QuickRuleStatus = "ok" | "warning" | "fail";
 
 export type QuickRuleResult = {
   id: string;
@@ -36,7 +36,7 @@ type ClaimDraftState = {
 };
 
 const initial: ClaimDraft = {
-  notes: '',
+  notes: "",
   selected: [],
   quickRules: [],
   meta: { updatedAt: Date.now() },
@@ -47,24 +47,38 @@ export const useClaimDraft = create<ClaimDraftState>()(
     (set, get) => ({
       draft: initial,
       setNotes: (v) =>
-        set((s) => ({ draft: { ...s.draft, notes: v, meta: { updatedAt: Date.now() } } })),
+        set((s) => ({
+          draft: { ...s.draft, notes: v, meta: { updatedAt: Date.now() } },
+        })),
       addItem: (it) =>
         set((s) => {
-          if (s.draft.selected.some(x => x.code === it.code)) return s; // dedupe
-          return { draft: { ...s.draft, selected: [...s.draft.selected, it], meta: { updatedAt: Date.now() } } };
+          if (s.draft.selected.some((x) => x.code === it.code)) return s; // dedupe
+          return {
+            draft: {
+              ...s.draft,
+              selected: [...s.draft.selected, it],
+              meta: { updatedAt: Date.now() },
+            },
+          };
         }),
       removeItem: (code) =>
         set((s) => ({
           draft: {
             ...s.draft,
-            selected: s.draft.selected.filter(x => x.code !== code),
-            meta: { updatedAt: Date.now() }
-          }
+            selected: s.draft.selected.filter((x) => x.code !== code),
+            meta: { updatedAt: Date.now() },
+          },
         })),
       setQuickRules: (rs) =>
-        set((s) => ({ draft: { ...s.draft, quickRules: rs, meta: { updatedAt: Date.now() } } })),
+        set((s) => ({
+          draft: {
+            ...s.draft,
+            quickRules: rs,
+            meta: { updatedAt: Date.now() },
+          },
+        })),
       clear: () => set({ draft: initial }),
     }),
-    { name: 'mbspro-claim-draft' } // localStorage key
+    { name: "mbspro-claim-draft" } // localStorage key
   )
 );
