@@ -24,7 +24,17 @@ services:
       - "8081:8080"
     environment:
       JAVA_OPTS: "-Xms512m -Xmx2g"
+      # HAPI FHIR 数据持久化配置
+      HAPI_FHIR__DATASOURCE__URL: "jdbc:h2:file:/hapi-data/hapi"
+      HAPI_FHIR__DATASOURCE__DRIVER: "org.h2.Driver"
+      HAPI_FHIR__DATASOURCE__USERNAME: "sa"
+      HAPI_FHIR__DATASOURCE__PASSWORD: ""
+      # 启用 H2 控制台（可选）
+      HAPI_FHIR__H2_CONSOLE__ENABLED: "true"
+    volumes:
+      - hapi_data:/hapi-data
     restart: unless-stopped
 
 volumes:
   postgres_data:
+  hapi_data:
