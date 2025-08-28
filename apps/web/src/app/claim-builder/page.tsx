@@ -198,12 +198,12 @@ export default function ClaimBuilderPage() {
     }
 
     if (!draft.notes) {
-      alert('请添加临床笔记')
+      alert('Please add clinical notes')
       return
     }
 
     if (draft.selected.length === 0) {
-      alert('请选择至少一个 MBS 项目')
+      alert('Please select at least one MBS item')
       return
     }
 
