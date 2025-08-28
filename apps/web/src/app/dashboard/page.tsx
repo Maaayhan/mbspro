@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import AppLayout from '@/components/AppLayout'
+import DashboardFilters from '@/components/DashboardFilters'
 import { 
   ArrowUpIcon, 
   ArrowDownIcon,
@@ -361,32 +362,23 @@ export default function DashboardPage() {
   return (
     <AppLayout>
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Compliance Banner with Time Filter */}
+        {/* Compliance Banner with Integrated Filters */}
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center">
+            {/* Left side - Compliance info */}
+            <div className="flex items-center mt-2">
               <CheckCircleIcon className="h-6 w-6 text-green-500 mr-3" />
               <div>
                 <h3 className="text-lg font-medium text-green-800">Excellent Compliance Status</h3>
                 <p className="text-green-700">
-                  Your practice maintains a {(dashboardData.kpis.complianceScore * 100).toFixed(1)}% compliance score. All recent claims follow MBS guidelines.
+                  {(dashboardData.kpis.complianceScore * 100).toFixed(1)}% Compliance: All Recent Claims Follow MBS Guidelines. 
                 </p>
               </div>
             </div>
-            
-            {/* Time Filter */}
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <select
-                value={filters.dateRange}
-                onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value }))}
-                className="bg-white/80 backdrop-blur-sm border border-green-200 text-green-800 text-sm rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:bg-white transition-all duration-200 hover:bg-white"
-              >
-                <option>Last 30 days</option>
-                <option>Last 90 days</option>
-                <option>This month</option>
-                <option>Custom...</option>
-              </select>
+
+            {/* Right side - Filters */}
+            <div className="ml-6">
+              <DashboardFilters filters={filters} onChange={setFilters} />
             </div>
           </div>
         </div>
@@ -661,35 +653,6 @@ export default function DashboardPage() {
                 ))}
               </tbody>
             </table>
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="card bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <h3 className="text-lg font-semibold text-blue-900 mb-2">New Claim</h3>
-            <p className="text-blue-700 text-sm mb-4">Start a new Medicare claim with AI assistance</p>
-            <Link href="/suggestions" className="inline-block">
-              <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                Create Claim
-              </button>
-            </Link>
-          </div>
-
-          <div className="card bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-            <h3 className="text-lg font-semibold text-green-900 mb-2">Compliance Check</h3>
-            <p className="text-green-700 text-sm mb-4">Review practice compliance and get recommendations</p>
-            <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
-              Run Check
-            </button>
-          </div>
-
-          <div className="card bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-            <h3 className="text-lg font-semibold text-purple-900 mb-2">Analytics Report</h3>
-            <p className="text-purple-700 text-sm mb-4">Generate detailed practice performance report</p>
-            <button className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
-              Generate Report
-            </button>
           </div>
         </div>
 

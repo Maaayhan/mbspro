@@ -393,36 +393,6 @@ export default function ClaimBuilderPage() {
                 </button>
               </div>
             </div>
-
-            {/* Quick Stats */}
-            <div className="card">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Stats</h3>
-              
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Items:</span>
-                  <span className="text-sm font-medium text-gray-900">{claimItems.length}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Total Value:</span>
-                  <span className="text-sm font-medium text-gray-900">
-                    ${claimItems.reduce((sum, item) => sum + (item.fee * item.quantity), 0).toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Patient Rebate:</span>
-                  <span className="text-sm font-medium text-gray-900">
-                    {claimItems.length > 0 ? '$95.20' : '$0.00'}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Gap Payment:</span>
-                  <span className="text-sm font-medium text-gray-900">
-                    {claimItems.length > 0 ? '$46.35' : '$0.00'}
-                  </span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>

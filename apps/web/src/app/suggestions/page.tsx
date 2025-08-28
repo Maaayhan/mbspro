@@ -379,22 +379,6 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
                   </div>
                 </div>
               )}
-              
-              {/* Quick Actions */}
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <h4 className="text-sm font-medium text-gray-900 mb-3">Quick Actions</h4>
-                <div className="space-y-2">
-                  <button className="w-full text-left text-sm text-gray-600 hover:text-gray-900 py-1">
-                    📋 Load Template
-                  </button>
-                  <button className="w-full text-left text-sm text-gray-600 hover:text-gray-900 py-1">
-                    💾 Save as Draft
-                  </button>
-                  <button className="w-full text-left text-sm text-gray-600 hover:text-gray-900 py-1">
-                    📊 View Guidelines
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
         </div>
