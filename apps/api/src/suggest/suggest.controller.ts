@@ -39,4 +39,33 @@ export class SuggestController {
   async suggest(@Body() request: SuggestRequestDto): Promise<SuggestResponseDto> {
     return this.suggestService.suggest(request);
   }
+
+  @Post('explain-text')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Generate AI explanation text for a candidate' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'string' },
+        title: { type: 'string' },
+        rule_results: { type: 'array', items: { type: 'object' } },
+        compliance: { type: 'string' },
+        context: { type: 'object' },
+      },
+      required: ['code', 'title']
+    }
+  })
+  async explainText(@Body() body: any) {
+    const { code, title, rule_results, compliance } = body || {}
+    const fails = Array.isArray(rule_results) ? rule_results.filter((r: any) => r.status === 'fail') : []
+    const warns = Array.isArray(rule_results) ? rule_results.filter((r: any) => r.status === 'warn') : []
+    let summary = `${code || ''} — ${title || ''}. `
+    if (compliance === 'red') summary += 'Policy check: blocked. '
+    else if (compliance === 'amber') summary += 'Policy check: needs review. '
+    else summary += 'Policy check: ok. '
+    if (fails.length) summary += `Failed: ${fails.slice(0,3).map((r:any)=>r.id).join(', ')}. `
+    if (warns.length) summary += `Warnings: ${warns.slice(0,3).map((r:any)=>r.id).join(', ')}. `
+    return { ok: true, text: summary.trim() }
+  }
 }
