@@ -1,7 +1,13 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { BuildClaimDto } from "./dto/build-claim.dto";
 import { SubmitBundleDto } from "./dto/submit-bundle.dto";
-import { postBundle, postResource } from "./hapi.client";
+import {
+  postBundle,
+  postResource,
+  getClaims,
+  getClaimsCount,
+  getClaimsByPatient,
+} from "./hapi.client";
 import { SupabaseService } from "../services/supabase.service";
 import { buildEncounter } from "./fhir/encounter.builder";
 import { buildTransactionBundle, generateFullUrl } from "./fhir/bundle.builder";
@@ -139,22 +145,31 @@ export class ClaimService {
     const currency = dto.currency ?? "AUD";
     const entries: any[] = [];
 
-    // 1) Patient：可选 + 事务内 upsert
+    // 1) Patient：自动创建或使用现有资源
     let patientRef = dto.patientId;
-    if (!patientRef) {
+    const isPatientDirectRef =
+      /^urn:/i.test(patientRef) ||
+      patientRef.includes("/") ||
+      /^https?:\/\//i.test(patientRef);
+
+    if (!isPatientDirectRef) {
       const patientUrn = generateFullUrl("Patient", 0);
-      const patientMrn = "DEMO-PAT-001";
       entries.push({
         fullUrl: patientUrn,
         resource: {
           resourceType: "Patient",
-          identifier: [{ system: "urn:mrn", value: patientMrn }],
-          name: [{ family: "Demo", given: ["Patient"] }],
+          identifier: [{ system: "urn:mrn", value: patientRef }],
+          name: [
+            {
+              family: "Demo",
+              given: [patientRef.replace("DEMO-PAT-", "Patient")],
+            },
+          ],
         },
         request: {
           method: "POST",
           url: "Patient",
-          ifNoneExist: `identifier=urn:mrn|${patientMrn}`,
+          ifNoneExist: `identifier=urn:mrn|${patientRef}`,
         },
       });
       patientRef = patientUrn; // 用 URN 引用
@@ -255,5 +270,74 @@ export class ClaimService {
     });
 
     return { claim };
+  }
+
+  /** Get claims statistics */
+  async getClaimsStats() {
+    try {
+      // Get total count
+      const countResponse = await getClaimsCount();
+      const total = countResponse.total || 0;
+
+      // Get recent claims (for display)
+      const recentClaims = await getClaims({
+        _sort: "-_lastUpdated",
+        _count: "10",
+      });
+
+      // Calculate total amount
+      let totalAmount = 0;
+      if (recentClaims.entry && Array.isArray(recentClaims.entry)) {
+        totalAmount = recentClaims.entry.reduce((sum, entry) => {
+          const claim = entry.resource;
+          if (claim?.total?.value) {
+            return sum + claim.total.value;
+          }
+          return sum;
+        }, 0);
+      }
+
+      return {
+        total,
+        totalAmount: Number(totalAmount.toFixed(2)),
+        recentClaims: recentClaims.entry || [],
+        currency: "AUD",
+      };
+    } catch (error) {
+      console.error("Failed to get claims stats:", error);
+      return {
+        total: 0,
+        totalAmount: 0,
+        recentClaims: [],
+        currency: "AUD",
+      };
+    }
+  }
+
+  /** Get all claims */
+  async getAllClaims(
+    params: {
+      _count?: string;
+      _sort?: string;
+      patient?: string;
+      _lastUpdated?: string;
+    } = {}
+  ) {
+    try {
+      return await getClaims(params);
+    } catch (error) {
+      console.error("Failed to get claims:", error);
+      throw error;
+    }
+  }
+
+  /** Get claims for a specific patient */
+  async getPatientClaims(patientId: string) {
+    try {
+      return await getClaimsByPatient(patientId);
+    } catch (error) {
+      console.error("Failed to get patient claims:", error);
+      throw error;
+    }
   }
 }

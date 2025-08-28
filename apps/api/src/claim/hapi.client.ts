@@ -115,6 +115,83 @@ export async function postBundle(bundle: any) {
   return fhirPost("/", bundle);
 }
 
+// New: FHIR GET request
+async function fhirGet(
+  path: string,
+  params: Record<string, string> = {},
+  timeoutMs = 20000
+) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  const url = new URL(joinUrl(BASE, path));
+  Object.entries(params).forEach(([key, value]) => {
+    url.searchParams.append(key, value);
+  });
+
+  console.log("[HAPI GET]", url.toString());
+
+  try {
+    const res = await fetch(url.toString(), {
+      method: "GET",
+      headers: {
+        Accept: "application/fhir+json",
+      },
+      signal: controller.signal,
+      redirect: "follow",
+    });
+
+    const raw = await res.text();
+    const ct = res.headers.get("content-type") || "";
+
+    if (!res.ok) {
+      if (ct.includes("json")) {
+        try {
+          const j = JSON.parse(raw);
+          throw new FhirHttpError(res.status, res.statusText, j, ct, raw);
+        } catch {
+          throw new FhirHttpError(
+            res.status,
+            res.statusText,
+            undefined,
+            ct,
+            raw
+          );
+        }
+      }
+      throw new FhirHttpError(res.status, res.statusText, undefined, ct, raw);
+    }
+
+    if (!ct.includes("json")) {
+      throw new FhirHttpError(
+        502,
+        "Bad Gateway (non-JSON from FHIR)",
+        undefined,
+        ct,
+        raw
+      );
+    }
+    return JSON.parse(raw);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Get all claims
+export async function getClaims(params: Record<string, string> = {}) {
+  return fhirGet("/Claim", params);
+}
+
+// Get claims count
+export async function getClaimsCount() {
+  return fhirGet("/Claim", { _summary: "count" });
+}
+
+// Get claims for a specific patient
+export async function getClaimsByPatient(patientId: string) {
+  return fhirGet("/Claim", { patient: patientId });
+}
+
 export async function getMetadata(): Promise<any> {
   const u = joinUrl(BASE, "/metadata?_format=json");
   const res = await fetch(u, { headers: { Accept: "application/fhir+json" } });
