@@ -1,12 +1,16 @@
 'use client'
 
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import Link from 'next/link'
 import AppLayout from '@/components/AppLayout'
 import { 
   ArrowUpIcon, 
   ArrowDownIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
-  ClockIcon
+  ClockIcon,
+  DocumentArrowDownIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline'
 import {
   LineChart,
@@ -30,6 +34,7 @@ interface KPICard {
   change: string
   trend: 'up' | 'down'
   description: string
+  key: string
 }
 
 interface ActivityItem {
@@ -40,24 +45,89 @@ interface ActivityItem {
   status: 'success' | 'warning' | 'info'
 }
 
-export default function DashboardPage() {
-  // Sample data for charts
-  const revenueData = [
-    { month: 'Jan', revenue: 12400, claims: 156 },
-    { month: 'Feb', revenue: 13800, claims: 172 },
-    { month: 'Mar', revenue: 15200, claims: 189 },
-    { month: 'Apr', revenue: 14600, claims: 183 },
-    { month: 'May', revenue: 16800, claims: 204 },
-    { month: 'Jun', revenue: 18200, claims: 228 },
-  ]
+type KPIs = {
+  totalClaims: number;
+  errorRate: number;        // 0..1
+  revenue: number;          // $
+  complianceScore: number;  // 0..1
+};
 
-  const topItemsData = [
-    { code: '23', description: 'Consultation Level A', count: 145, revenue: 6003 },
-    { code: '36', description: 'Consultation Level C', count: 89, revenue: 7614 },
-    { code: '721', description: 'Health Assessment', count: 67, revenue: 4489 },
-    { code: '11700', description: 'ECG', count: 54, revenue: 1434 },
-    { code: '2713', description: 'Mental Health', count: 42, revenue: 4284 },
-  ]
+type RevenuePoint = { month: string; value: number };
+type TopItem = { code: string; title: string; count: number; revenue: number };
+type AuditRow = {
+  date: string;
+  claimId: string;
+  provider: string;
+  items: string;
+  reason: string;
+  status: 'Rejected' | 'Flagged';
+};
+type RuleRow = { id: string; name: string; status: 'ok'|'warning'|'fail'; reason: string };
+
+type DashboardData = {
+  kpis: KPIs;
+  revenueTrend: RevenuePoint[];
+  topItems: TopItem[];
+  auditRows: AuditRow[];
+  rules: RuleRow[];
+};
+
+type FilterState = {
+  dateRange: string;
+  provider: string;
+  item: string;
+  fromDate?: string;
+  toDate?: string;
+};
+
+export default function DashboardPage() {
+  // State management
+  const [filters, setFilters] = useState<FilterState>({
+    dateRange: 'Last 30 days',
+    provider: 'All',
+    item: 'All'
+  })
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [selectedKPI, setSelectedKPI] = useState<string | null>(null)
+
+  // Mock data
+  const mockData: DashboardData = useMemo(() => ({
+    kpis: {
+      totalClaims: 1247,
+      errorRate: 0.023,
+      revenue: 82400,
+      complianceScore: 0.977
+    },
+    revenueTrend: [
+      { month: 'Jan', value: 12400 },
+      { month: 'Feb', value: 13800 },
+      { month: 'Mar', value: 15200 },
+      { month: 'Apr', value: 14600 },
+      { month: 'May', value: 16800 },
+      { month: 'Jun', value: 18200 },
+    ],
+    topItems: [
+      { code: '23', title: 'Consultation Level A', count: 145, revenue: 6003 },
+      { code: '36', title: 'Consultation Level C', count: 89, revenue: 7614 },
+      { code: '721', title: 'Health Assessment', count: 67, revenue: 4489 },
+      { code: '11700', title: 'ECG', count: 54, revenue: 1434 },
+      { code: '2713', title: 'Mental Health', count: 42, revenue: 4284 },
+    ],
+    auditRows: [
+      { date: '2024-01-15', claimId: 'CLM-2024-001523', provider: 'Dr. Smith', items: '23, 36', reason: 'Insufficient documentation', status: 'Rejected' },
+      { date: '2024-01-14', claimId: 'CLM-2024-001522', provider: 'Dr. Lee', items: '11700', reason: 'Time interval violation', status: 'Flagged' },
+      { date: '2024-01-13', claimId: 'CLM-2024-001521', provider: 'Dr. Smith', items: '721', reason: 'Patient eligibility issue', status: 'Rejected' },
+      { date: '2024-01-12', claimId: 'CLM-2024-001520', provider: 'Dr. Wilson', items: '2713', reason: 'Incorrect code selection', status: 'Flagged' },
+    ],
+    rules: [
+      { id: 'R001', name: 'Documentation Completeness', status: 'ok', reason: 'All required fields documented' },
+      { id: 'R002', name: 'Time Interval Compliance', status: 'warning', reason: '2 claims with potential time violations' },
+      { id: 'R003', name: 'Patient Eligibility', status: 'ok', reason: 'All patients meet eligibility criteria' },
+      { id: 'R004', name: 'Code Accuracy', status: 'fail', reason: '5 claims with incorrect code selection' },
+      { id: 'R005', name: 'Billing Rules', status: 'ok', reason: 'All billing rules followed correctly' },
+    ]
+  }), [])
 
   const errorReasonsData = [
     { name: 'Documentation', value: 35, color: '#ef4444' },
@@ -67,36 +137,132 @@ export default function DashboardPage() {
     { name: 'Other', value: 5, color: '#6b7280' },
   ]
 
-  const kpiCards: KPICard[] = [
+  // Generate KPI cards from data
+  const getKPICards = (data: DashboardData): KPICard[] => [
     {
+      key: 'totalClaims',
       title: 'Total Claims',
-      value: '1,247',
+      value: data.kpis.totalClaims.toLocaleString(),
       change: '+12.5%',
       trend: 'up',
       description: 'This month'
     },
     {
+      key: 'errorRate',
       title: 'Error/Reject Rate',
-      value: '2.3%',
+      value: `${(data.kpis.errorRate * 100).toFixed(1)}%`,
       change: '-0.8%',
       trend: 'down',
       description: 'Industry avg: 4.1%'
     },
     {
+      key: 'revenue',
       title: 'Total Revenue',
-      value: '$82,400',
+      value: `$${data.kpis.revenue.toLocaleString()}`,
       change: '+18.2%',
       trend: 'up',
       description: 'Last 30 days'
     },
     {
+      key: 'complianceScore',
       title: 'Compliance Score',
-      value: '97.7%',
+      value: `${(data.kpis.complianceScore * 100).toFixed(1)}%`,
       change: '+2.1%',
       trend: 'up',
       description: 'Above target'
     },
   ]
+
+  // API functions
+  const fetchDashboardData = useCallback(async (filterParams: FilterState) => {
+    setIsLoading(true)
+    try {
+      const apiBase = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000').replace(/\/$/, '')
+      const searchParams = new URLSearchParams()
+      
+      if (filterParams.fromDate) searchParams.set('from', filterParams.fromDate)
+      if (filterParams.toDate) searchParams.set('to', filterParams.toDate)
+      if (filterParams.provider !== 'All') searchParams.set('provider', filterParams.provider)
+      if (filterParams.item !== 'All') searchParams.set('item', filterParams.item)
+
+      const response = await fetch(`${apiBase}/api/metrics?${searchParams}`)
+      if (!response.ok) throw new Error('API failed')
+      
+      const data = await response.json()
+      setDashboardData(data)
+    } catch (error) {
+      console.warn('API failed, using mock data:', error)
+      setDashboardData(mockData)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [mockData])
+
+  // Date range calculation
+  const getDateRange = (range: string) => {
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    
+    switch (range) {
+      case 'Last 30 days':
+        return {
+          fromDate: new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          toDate: today.toISOString().split('T')[0]
+        }
+      case 'Last 90 days':
+        return {
+          fromDate: new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          toDate: today.toISOString().split('T')[0]
+        }
+      case 'This month':
+        return {
+          fromDate: new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0],
+          toDate: today.toISOString().split('T')[0]
+        }
+      default:
+        return {}
+    }
+  }
+
+  // CSV Export function
+  const exportToCSV = (data: AuditRow[], filename: string) => {
+    const headers = ['Date', 'Claim ID', 'Provider', 'Items', 'Reason', 'Status']
+    const csvContent = [
+      headers.join(','),
+      ...data.map(row => [
+        row.date,
+        row.claimId,
+        row.provider,
+        `"${row.items}"`,
+        `"${row.reason}"`,
+        row.status
+      ].join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', filename)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  // Effects
+  useEffect(() => {
+    const dateRange = getDateRange(filters.dateRange)
+    const updatedFilters = { ...filters, ...dateRange }
+    fetchDashboardData(updatedFilters)
+  }, [filters, fetchDashboardData])
+
+  // Initialize with mock data
+  useEffect(() => {
+    if (!dashboardData) {
+      setDashboardData(mockData)
+    }
+  }, [dashboardData, mockData])
 
   const recentActivity: ActivityItem[] = [
     {
@@ -142,18 +308,68 @@ export default function DashboardPage() {
     }
   }
 
+  const getRuleStatusBadge = (status: 'ok' | 'warning' | 'fail') => {
+    const styles = {
+      ok: 'bg-green-100 text-green-800',
+      warning: 'bg-yellow-100 text-yellow-800', 
+      fail: 'bg-red-100 text-red-800'
+    }
+    const labels = {
+      ok: 'OK',
+      warning: 'Warning',
+      fail: 'Fail'
+    }
+    return (
+      <span className={`px-2 py-1 text-xs font-medium rounded-full ${styles[status]}`}>
+        {labels[status]}
+      </span>
+    )
+  }
+
+  if (!dashboardData) {
+    return (
+      <AppLayout>
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading dashboard...</p>
+          </div>
+        </div>
+      </AppLayout>
+    )
+  }
+
+  const kpiCards = getKPICards(dashboardData)
+
   return (
     <AppLayout>
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Compliance Banner */}
+        {/* Compliance Banner with Time Filter */}
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <CheckCircleIcon className="h-6 w-6 text-green-500 mr-3" />
-            <div>
-              <h3 className="text-lg font-medium text-green-800">Excellent Compliance Status</h3>
-              <p className="text-green-700">
-                Your practice maintains a 97.7% compliance score. All recent claims follow MBS guidelines.
-              </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <CheckCircleIcon className="h-6 w-6 text-green-500 mr-3" />
+              <div>
+                <h3 className="text-lg font-medium text-green-800">Excellent Compliance Status</h3>
+                <p className="text-green-700">
+                  Your practice maintains a {(dashboardData.kpis.complianceScore * 100).toFixed(1)}% compliance score. All recent claims follow MBS guidelines.
+                </p>
+              </div>
+            </div>
+            
+            {/* Time Filter */}
+            <div className="flex items-center space-x-3">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <select
+                value={filters.dateRange}
+                onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value }))}
+                className="bg-white/80 backdrop-blur-sm border border-green-200 text-green-800 text-sm rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:bg-white transition-all duration-200 hover:bg-white"
+              >
+                <option>Last 30 days</option>
+                <option>Last 90 days</option>
+                <option>This month</option>
+                <option>Custom...</option>
+              </select>
             </div>
           </div>
         </div>
@@ -161,7 +377,15 @@ export default function DashboardPage() {
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {kpiCards.map((kpi, index) => (
-            <div key={index} className="card">
+            <div 
+              key={index} 
+              className={`card transition-shadow duration-200 ${
+                kpi.key === 'complianceScore' 
+                  ? 'cursor-pointer hover:shadow-lg' 
+                  : ''
+              }`}
+              onClick={() => kpi.key === 'complianceScore' ? setSelectedKPI(kpi.key) : undefined}
+            >
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">{kpi.title}</p>
@@ -179,9 +403,14 @@ export default function DashboardPage() {
                 </div>
               </div>
               <p className="text-sm text-gray-500 mt-1">{kpi.description}</p>
+              {kpi.key === 'complianceScore' && (
+                <p className="text-xs text-primary-600 mt-2">Click for compliance details →</p>
+              )}
             </div>
           ))}
         </div>
+
+
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -190,7 +419,7 @@ export default function DashboardPage() {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Trend</h3>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={revenueData}>
+                <LineChart data={dashboardData.revenueTrend.map(item => ({ month: item.month, revenue: item.value }))}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="month" stroke="#6b7280" />
                   <YAxis stroke="#6b7280" />
@@ -201,6 +430,7 @@ export default function DashboardPage() {
                       borderRadius: '8px',
                       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                     }}
+                    formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Revenue']}
                   />
                   <Line 
                     type="monotone" 
@@ -216,10 +446,22 @@ export default function DashboardPage() {
 
           {/* Top MBS Items */}
           <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Top MBS Items</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Top MBS Items</h3>
+              <div className="flex items-center space-x-4 text-sm text-gray-500">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-teal-500 rounded"></div>
+                  <span>Claims</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                  <span>Revenue</span>
+                </div>
+              </div>
+            </div>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topItemsData} layout="horizontal">
+                <BarChart data={dashboardData.topItems} layout="horizontal">
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis type="number" stroke="#6b7280" />
                   <YAxis 
@@ -236,11 +478,16 @@ export default function DashboardPage() {
                       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                     }}
                     formatter={(value, name) => [
-                      name === 'count' ? `${value} claims` : `$${value}`,
+                      name === 'count' ? `${value} claims` : `$${Number(value).toLocaleString()}`,
                       name === 'count' ? 'Claims' : 'Revenue'
                     ]}
+                    labelFormatter={(code) => {
+                      const item = dashboardData.topItems.find(i => i.code === code)
+                      return item ? `${code}: ${item.title}` : code
+                    }}
                   />
                   <Bar dataKey="count" fill="#14b8a6" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="revenue" fill="#3b82f6" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -314,14 +561,65 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Errors / Rejects Audit Detail */}
+        <div className="card">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Errors / Rejects (Audit Detail)</h3>
+            <button
+              onClick={() => exportToCSV(dashboardData.auditRows, 'audit-details.csv')}
+              className="flex items-center space-x-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              <DocumentArrowDownIcon className="h-4 w-4" />
+              <span>Export CSV</span>
+            </button>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Claim ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Provider</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item(s)</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {dashboardData.auditRows.map((row, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.date}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-primary-600">{row.claimId}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.provider}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.items}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">{row.reason}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        row.status === 'Rejected' 
+                          ? 'bg-red-100 text-red-800' 
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {row.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="card bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
             <h3 className="text-lg font-semibold text-blue-900 mb-2">New Claim</h3>
             <p className="text-blue-700 text-sm mb-4">Start a new Medicare claim with AI assistance</p>
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
-              Create Claim
-            </button>
+            <Link href="/suggestions" className="inline-block">
+              <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                Create Claim
+              </button>
+            </Link>
           </div>
 
           <div className="card bg-gradient-to-br from-green-50 to-green-100 border-green-200">
@@ -340,6 +638,51 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
+
+        {/* KPI Drill-down Modal */}
+        {selectedKPI && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Compliance Rules Details
+                </h3>
+                <button
+                  onClick={() => setSelectedKPI(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+              
+              <div className="p-6 overflow-y-auto max-h-[60vh]">
+                <div className="space-y-4">
+                  {dashboardData.rules.map((rule, index) => (
+                    <div key={index} className="bg-gray-50 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-3">
+                          <span className="font-medium text-gray-900">{rule.id}</span>
+                          <span className="text-gray-600">{rule.name}</span>
+                        </div>
+                        {getRuleStatusBadge(rule.status)}
+                      </div>
+                      <p className="text-sm text-gray-600">{rule.reason}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <button
+                  onClick={() => setSelectedKPI(null)}
+                  className="w-full bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AppLayout>
   )
