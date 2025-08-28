@@ -25,3 +25,6 @@ services:
     environment:
       JAVA_OPTS: "-Xms512m -Xmx2g"
     restart: unless-stopped
+
+volumes:
+  postgres_data:
