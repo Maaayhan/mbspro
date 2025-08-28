@@ -6,6 +6,7 @@ import { SuggestModule } from './suggest/suggest.module';
 import { RagModule } from './rag/rag.module';
 import { RulesModule } from './rules/rules.module';
 import { MbsModule } from './mbs/mbs.module';
+import { DocGeneratorModule } from './doc-generator/doc-generator.module';
 
 const logger = new Logger('AppModule');
 
@@ -19,6 +20,7 @@ logger.log('📊 Using Supabase client for all database operations');
     SuggestModule,
     RulesModule,
     MbsModule,
+    DocGeneratorModule,
   ],
   controllers: [AppController],
   providers: [AppService],

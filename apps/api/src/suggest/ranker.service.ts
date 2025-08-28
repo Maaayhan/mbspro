@@ -17,6 +17,8 @@ export interface RankRow {
   code: string;
   title: string;
   description: string;
+  match_reason?: string;
+  fee?: number;
   flags: Record<string, any>;
   time_threshold?: number;
   sim?: number; // bm25-like normalized similarity 0..1
@@ -95,9 +97,9 @@ export class RankerService {
         code: row.code,
         title: row.title,
         score,
-        score_breakdown: { bm25 },
+        score_breakdown: { bm25, ...features },
         feature_hits: hits,
-        short_explain: '',
+        short_explain: row.match_reason || '',
       } as SuggestCandidate;
     });
 

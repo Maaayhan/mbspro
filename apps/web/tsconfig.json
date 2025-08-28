@@ -9,6 +9,7 @@
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
+    "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",
@@ -27,8 +28,11 @@
       "@/*": [
         "./src/*"
       ],
+      "@/components/*": [
+        "./src/components/*"
+      ],
       "@/app/*": [
-        "./app/*"
+        "./src/app/*"
       ],
       "@mbspro/shared": [
         "../../packages/shared/src"
@@ -37,8 +41,8 @@
   },
   "include": [
     "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
+    "src/**/*.ts",
+    "src/**/*.tsx",
     ".next/types/**/*.ts"
   ],
   "exclude": [

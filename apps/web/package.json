@@ -11,10 +11,13 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@heroicons/react": "^2.0.18",
+    "@mbspro/shared": "workspace:*",
     "next": "^14.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "@mbspro/shared": "workspace:*"
+    "recharts": "^2.8.0",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@types/node": "^20.8.0",
