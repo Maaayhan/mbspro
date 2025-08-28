@@ -1,3 +1,5 @@
+import { FhirHttpError } from "./fhir.error";
+
 const BASE = (process.env.HAPI_BASE || "http://localhost:8081/fhir").replace(
   /\/$/,
   ""
@@ -39,20 +41,29 @@ async function fhirPost(
       if (ct.includes("json")) {
         try {
           const j = JSON.parse(raw);
-          throw new Error(
-            `HAPI ${res.status} ${res.statusText}: ${JSON.stringify(j).slice(0, 1200)}`
-          );
+          throw new FhirHttpError(res.status, res.statusText, j, ct, raw);
         } catch {
-          /* ignore parse error, fallback below */
+          throw new FhirHttpError(
+            res.status,
+            res.statusText,
+            undefined,
+            ct,
+            raw
+          );
         }
       }
-      throw new Error(
-        `HAPI ${res.status} ${res.statusText} [${ct}]: ${raw.slice(0, 1200)}`
-      );
+      // 非 JSON
+      throw new FhirHttpError(res.status, res.statusText, undefined, ct, raw);
     }
 
     if (!ct.includes("json")) {
-      throw new Error(`HAPI returned non-JSON [${ct}]: ${raw.slice(0, 800)}`);
+      throw new FhirHttpError(
+        502,
+        "Bad Gateway (non-JSON from FHIR)",
+        undefined,
+        ct,
+        raw
+      );
     }
     return JSON.parse(raw);
   } finally {
@@ -61,17 +72,46 @@ async function fhirPost(
 }
 
 export async function postResource(resource: any) {
-  if (!resource?.resourceType) throw new Error("resourceType is required");
+  if (!resource?.resourceType)
+    throw new FhirHttpError(400, "Bad Request", {
+      resourceType: "OperationOutcome",
+      issue: [
+        {
+          severity: "error",
+          code: "invalid",
+          diagnostics: "resourceType is required",
+        },
+      ],
+    });
   return fhirPost(`/${resource.resourceType}`, resource);
 }
 
 export async function postBundle(bundle: any) {
-  if (bundle?.resourceType !== "Bundle") throw new Error("Not a FHIR Bundle");
+  if (bundle?.resourceType !== "Bundle") {
+    throw new FhirHttpError(400, "Bad Request", {
+      resourceType: "OperationOutcome",
+      issue: [
+        {
+          severity: "error",
+          code: "invalid",
+          diagnostics: "Not a FHIR Bundle",
+        },
+      ],
+    });
+  }
   const t = bundle?.type;
   if (t !== "transaction" && t !== "batch") {
-    throw new Error("Bundle.type must be 'transaction' or 'batch'");
+    throw new FhirHttpError(400, "Bad Request", {
+      resourceType: "OperationOutcome",
+      issue: [
+        {
+          severity: "error",
+          code: "invalid",
+          diagnostics: "Bundle.type must be 'transaction' or 'batch'",
+        },
+      ],
+    });
   }
-
   return fhirPost("/", bundle);
 }
 
@@ -79,8 +119,19 @@ export async function getMetadata(): Promise<any> {
   const u = joinUrl(BASE, "/metadata?_format=json");
   const res = await fetch(u, { headers: { Accept: "application/fhir+json" } });
   const raw = await res.text();
-  if (!res.ok)
-    throw new Error(`GET ${u} -> ${res.status}: ${raw.slice(0, 800)}`);
+  if (!res.ok) {
+    let outcome: any;
+    try {
+      outcome = JSON.parse(raw);
+    } catch {}
+    throw new FhirHttpError(
+      res.status,
+      res.statusText,
+      outcome,
+      res.headers.get("content-type") || "",
+      raw
+    );
+  }
   return JSON.parse(raw);
 }
 
