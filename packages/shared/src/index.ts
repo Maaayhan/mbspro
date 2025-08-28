@@ -7,6 +7,15 @@
 export interface SuggestRequest {
   note: string;
   topN?: number;
+  // Optional compliance context from client/UI
+  selectedCodes?: string[];
+  lastClaimedItems?: Array<{ code: string; at: string }>;
+  providerType?: 'GP' | 'Registrar' | 'NP' | 'Specialist';
+  location?: 'clinic' | 'home' | 'nursing_home' | 'hospital';
+  referralPresent?: boolean;
+  consultStart?: string; // ISO
+  consultEnd?: string;   // ISO
+  hoursBucket?: 'business' | 'after_hours' | 'public_holiday';
 }
 
 // Response types
@@ -14,12 +23,19 @@ export interface SuggestCandidate {
   code: string;
   title: string;
   score: number;
+  confidence?: number;
   score_breakdown?: Record<string, number>;
   feature_hits?: string[];
   short_explain?: string;
   // Rules engine outputs
   rule_results?: RuleResult[];
   compliance?: 'green' | 'amber' | 'red';
+  // Optional risk banner, mirrors compliance but reserved for richer UIs
+  riskBanner?: 'green' | 'amber' | 'red';
+  // Item-level verdict
+  blocked?: boolean;
+  penalties?: number; // applied to score
+  warnings?: string[];
 }
 
 // RAG API types
@@ -57,9 +73,13 @@ export interface SuggestResponse {
 // Rule processing types
 export interface RuleResult {
   id: string;
+  // status remains for backward compatibility: 'pass' | 'warn' | 'fail'
   status: string;
   reason: string;
   refs?: string[];
+  // Optional richer fields for DSL-based engine
+  severity?: 'info' | 'warn' | 'error';
+  evidence?: any;
 }
 
 // -----------------------------

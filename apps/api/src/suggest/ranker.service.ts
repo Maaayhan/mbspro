@@ -95,7 +95,7 @@ export class RankerService {
         code: row.code,
         title: row.title,
         score,
-        score_breakdown: { bm25, features },
+        score_breakdown: { bm25 },
         feature_hits: hits,
         short_explain: '',
       } as SuggestCandidate;
@@ -110,10 +110,13 @@ export class RankerService {
     const candidates = rawCandidates.map((c) => {
       const raw = c.score;
       const normalized = range > 0 ? (raw - minScore) / range : 1;
+      // Confidence heuristic: combine normalized score with rule quality later (placeholder)
+      const confidence = Math.max(0, Math.min(1, normalized));
       return {
         ...c,
         score: Math.max(0, Math.min(1, normalized)),
-        score_breakdown: { ...(c.score_breakdown as any), score_raw: raw },
+        score_breakdown: { bm25: (c as any).score_breakdown?.bm25 ?? 0, score_raw: raw },
+        confidence,
       } as SuggestCandidate;
     });
 

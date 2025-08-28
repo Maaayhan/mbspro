@@ -26,31 +26,36 @@ export class SuggestService {
     const topN = request.topN && request.topN > 0 ? request.topN : 5;
 
     try {
-      const signalsInternal = this.signalExtractor.extract(note);
-      const topK = Math.max(30, topN * 10);
-
-      // RAG-only retrieval
+      // Parallelize signals extraction and RAG
+      const signalsPromise = Promise.resolve().then(() =>
+        this.signalExtractor.extract(note)
+      );
       let rows: any[] = [];
-      try {
-        const rag = await this.rag.queryRag(note, Math.min(topN + 3, 15));
-        if (rag && Array.isArray((rag as any).results)) {
-          rows = (rag as any).results.map((r: any) => ({
-            code:
-              r.itemNum ||
-              (Array.isArray(r.itemNums) ? r.itemNums[0] || "" : ""),
-            title: r.title || "",
-            description: r.match_reason || "",
-            flags: {},
-            time_threshold: undefined,
-            bm25:
-              typeof r.match_score === "number"
-                ? Math.max(0, Math.min(1, r.match_score))
-                : 0,
-          }));
-        }
-      } catch (e) {
-        this.logger.warn(`RAG query failed: ${String(e)}`);
-      }
+      const ragPromise = this.rag
+        .queryRag(note, Math.min(topN + 3, 15))
+        .then((rag) => {
+          if (rag && Array.isArray((rag as any).results)) {
+            rows = (rag as any).results.map((r: any) => ({
+              code:
+                r.itemNum ||
+                (Array.isArray(r.itemNums) ? r.itemNums[0] || "" : ""),
+              title: r.title || "",
+              description: r.match_reason || "",
+              flags: {},
+              time_threshold: undefined,
+              bm25:
+                typeof r.match_score === "number"
+                  ? Math.max(0, Math.min(1, r.match_score))
+                  : 0,
+            }));
+          }
+        })
+        .catch((e) => {
+          this.logger.warn(`RAG query failed: ${String(e)}`);
+        });
+
+      const [signalsInternal] = await Promise.all([signalsPromise, ragPromise]);
+      const topK = Math.max(30, topN * 10);
       // Preserve item facts so ranker and rules can use them
       const rowsForRanker = rows.map(
         (r) =>
@@ -78,27 +83,122 @@ export class SuggestService {
         const original = rowsForRanker.find(
           (r) => String(r.code) === String(c.code)
         );
-        const { ruleResults, compliance } = this.rules.evaluate({
-          note: {
-            mode: signalsInternal.mode,
-            after_hours: signalsInternal.afterHours,
-            chronic: signalsInternal.chronic,
-            duration: signalsInternal.duration,
-            keywords: signalsInternal.keywords,
-          },
-          item: {
-            code: c.code,
-            time_threshold: original?.time_threshold,
-            flags: original?.flags || {},
-            mutually_exclusive_with: original?.mutually_exclusive_with || [],
-          },
-          context: {
-            selected_codes: [],
-          },
-        });
-        return { ...c, rule_results: ruleResults, compliance };
+        const { ruleResults, compliance, blocked, penalties, warnings } =
+          this.rules.evaluate({
+            note: {
+              mode: signalsInternal.mode,
+              after_hours: signalsInternal.afterHours,
+              chronic: signalsInternal.chronic,
+              duration: signalsInternal.duration,
+              keywords: signalsInternal.keywords,
+            },
+            item: {
+              code: c.code,
+              time_threshold: original?.time_threshold,
+              flags: original?.flags || {},
+              mutually_exclusive_with: original?.mutually_exclusive_with || [],
+            },
+            context: {
+              selected_codes: Array.isArray((request as any).selectedCodes)
+                ? (request as any).selectedCodes.map(String)
+                : [],
+              last_claimed_items: Array.isArray(
+                (request as any).lastClaimedItems
+              )
+                ? (request as any).lastClaimedItems
+                : [],
+              provider_type: (request as any).providerType,
+              location: (request as any).location,
+              referral_present: (request as any).referralPresent,
+              hours_bucket: (request as any).hoursBucket,
+              consult_start: (request as any).consultStart,
+              consult_end: (request as any).consultEnd,
+              now_iso: new Date().toISOString(),
+            },
+          });
+        const riskBanner = compliance;
+        // Apply penalties to score (clamped)
+        const baseSim = Math.max(
+          0,
+          Math.min(1, (c.score ?? 0) - (penalties ?? 0))
+        );
+
+        // v1 confidence (aligned with /mbs-codes):
+        // - hard gate: any fail => cap to 0.3
+        // - soft coverage: warn proportion reduces scale
+        // - evidence sufficiency heuristic from extracted signals
+        // - margin bonus for duration above threshold
+        // - conflict penalty already in penalties
+        const anyFail = ruleResults.some((r) => r.status === "fail");
+        const warnCount = ruleResults.filter((r) => r.status === "warn").length;
+        const softTotal = warnCount + (anyFail ? 1 : 0);
+        const sRuleSoft =
+          softTotal > 0 ? Math.max(0, 1 - Math.min(0.4, warnCount * 0.1)) : 1;
+
+        // Evidence sufficiency from signals
+        let evidenceSuff = 0.7;
+        if (typeof signalsInternal.duration === "number") evidenceSuff += 0.1;
+        if (typeof signalsInternal.mode === "string") evidenceSuff += 0.1;
+        if (signalsInternal.afterHours) evidenceSuff += 0.1;
+        evidenceSuff = Math.max(0, Math.min(1, evidenceSuff));
+
+        // Margin bonus
+        let marginBonus = 0;
+        const threshold = original?.time_threshold ?? undefined;
+        if (
+          threshold &&
+          typeof signalsInternal.duration === "number" &&
+          signalsInternal.duration > threshold
+        ) {
+          const delta = Math.max(0, signalsInternal.duration - threshold);
+          marginBonus = Math.max(0, Math.min(0.2, (delta / 60) * 0.2));
+        }
+
+        let score = Math.max(0, Math.min(1, baseSim + marginBonus));
+        if (anyFail) score = Math.min(score, 0.3);
+        score =
+          score *
+          (0.7 + 0.3 * sRuleSoft) *
+          (0.7 + 0.3 * evidenceSuff) *
+          (1 - Math.max(0, Math.min(1, penalties ?? 0)));
+        const confidence = Math.max(
+          0,
+          Math.min(1, 1 / (1 + Math.exp(-4 * (score - 0.5))))
+        );
+
+        return {
+          ...c,
+          score: baseSim,
+          confidence,
+          rule_results: ruleResults,
+          compliance,
+          riskBanner,
+          blocked,
+          penalties,
+          warnings,
+        } as any;
       });
       const explained = withRules.map((c) => this.explainer.explain(c));
+      // Sort by computed confidence (desc), fallback to score
+      explained.sort((a: any, b: any) => {
+        const ca =
+          typeof a.confidence === "number"
+            ? a.confidence
+            : typeof a.score === "number"
+              ? a.score
+              : 0;
+        const cb =
+          typeof b.confidence === "number"
+            ? b.confidence
+            : typeof b.score === "number"
+              ? b.score
+              : 0;
+        if (cb !== ca) return cb - ca;
+        const sa = typeof a.score === "number" ? a.score : 0;
+        const sb = typeof b.score === "number" ? b.score : 0;
+        if (sb !== sa) return sb - sa;
+        return String(a.code).localeCompare(String(b.code));
+      });
 
       const response: SuggestResponse = {
         candidates: explained,
