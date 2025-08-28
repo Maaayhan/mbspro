@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import type { SuggestRequest, SuggestResponse, RagRequest, RagResponse, RagResult, SuggestCandidate } from '@mbspro/shared'
+import VoiceTranscribeButton from '../components/VoiceTranscribeButton'
 
 // Convert RAG API response to our internal format
 const convertRagToSuggest = (ragResponse: RagResponse): SuggestResponse => {
@@ -324,8 +325,9 @@ Example:
               onChange={(e) => setNote(e.target.value)}
               disabled={loading}
             />
-            <div className="mt-1 text-sm text-gray-500">
-              {note.length} characters
+            <div className="mt-2 flex justify-between items-center">
+              <span className="text-sm text-gray-500">{note.length} characters</span>
+              <VoiceTranscribeButton onTranscript={(text) => setNote(prev => prev + (prev ? '\n' : '') + text)} />
             </div>
           </div>
 

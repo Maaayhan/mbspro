@@ -7,10 +7,12 @@ import { RankerService } from './ranker.service';
 import { ExplainService } from './explain.service';
 import { RuleEngineService } from './rule-engine.service';
 import { RagModule } from '../rag/rag.module';
+import { VapiService } from './vapi.service';
+import { VapiController } from './vapi.controller';
 
 @Module({
   imports: [RagModule],
-  controllers: [SuggestController],
+  controllers: [SuggestController, VapiController],
   providers: [
     SuggestService,
     SupabaseService,
@@ -18,6 +20,7 @@ import { RagModule } from '../rag/rag.module';
     RankerService,
     ExplainService,
     RuleEngineService,
+    VapiService,
   ],
 })
 export class SuggestModule {}
