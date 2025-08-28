@@ -192,11 +192,11 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
                               <div className={`w-2 h-2 rounded-full mr-1 ${
                                 suggestion.score > 0.75 ? 'bg-green-400' : suggestion.score > 0.4 ? 'bg-yellow-400' : 'bg-red-400'
                               }`}></div>
-                              <span>Score: {(suggestion.score * 100).toFixed(0)}%</span>
+                              <span>Score: {(suggestion.score).toFixed(2)}</span>
                             </div>
                             {suggestion.score_breakdown && Object.entries(suggestion.score_breakdown).map(([key, value]) => (
                               <div key={key} className="flex items-center">
-                                <span>{key}: {(value * 100).toFixed(0)}%</span>
+                                <span>{key}: {(value).toFixed(2)}</span>
                               </div>
                             ))}
                           </div>
