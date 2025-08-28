@@ -1,12 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { SuggestRequestDto } from './dto/suggest-request.dto';
-import { SuggestResponseDto } from './dto/suggest-response.dto';
-import type { SuggestResponse, SuggestCandidate } from '@mbspro/shared';
-import { SignalExtractorService } from './signal-extractor.service';
-import { RankerService } from './ranker.service';
-import { ExplainService } from './explain.service';
-import { RuleEngineService } from './rule-engine.service';
-import { RagService } from '../rag/rag.service';
+import { Injectable, Logger } from "@nestjs/common";
+import { SuggestRequestDto } from "./dto/suggest-request.dto";
+import { SuggestResponseDto } from "./dto/suggest-response.dto";
+import type { SuggestResponse, SuggestCandidate } from "@mbspro/shared";
+import { SignalExtractorService } from "./signal-extractor.service";
+import { RankerService } from "./ranker.service";
+import { ExplainService } from "./explain.service";
+import { RuleEngineService } from "./rule-engine.service";
+import { RagService } from "../rag/rag.service";
 
 @Injectable()
 export class SuggestService {
@@ -17,12 +17,12 @@ export class SuggestService {
     private readonly ranker: RankerService,
     private readonly explainer: ExplainService,
     private readonly rules: RuleEngineService,
-    private readonly rag: RagService,
+    private readonly rag: RagService
   ) {}
 
   async suggest(request: SuggestRequestDto): Promise<SuggestResponseDto> {
     const started = Date.now();
-    const note = request.note || '';
+    const note = request.note || "";
     const topN = request.topN && request.topN > 0 ? request.topN : 5;
 
     try {
@@ -35,35 +35,49 @@ export class SuggestService {
         const rag = await this.rag.queryRag(note, Math.min(topN + 3, 15));
         if (rag && Array.isArray((rag as any).results)) {
           rows = (rag as any).results.map((r: any) => ({
-            code: (r.itemNum || (Array.isArray(r.itemNums) ? (r.itemNums[0] || '') : '')),
-            title: r.title || '',
-            description: r.match_reason || '',
+            code:
+              r.itemNum ||
+              (Array.isArray(r.itemNums) ? r.itemNums[0] || "" : ""),
+            title: r.title || "",
+            description: r.match_reason || "",
             flags: {},
             time_threshold: undefined,
-            bm25: typeof r.match_score === 'number' ? Math.max(0, Math.min(1, r.match_score)) : 0,
+            bm25:
+              typeof r.match_score === "number"
+                ? Math.max(0, Math.min(1, r.match_score))
+                : 0,
           }));
         }
       } catch (e) {
         this.logger.warn(`RAG query failed: ${String(e)}`);
       }
       // Preserve item facts so ranker and rules can use them
-      const rowsForRanker = rows.map((r) => ({
-        code: r.code,
-        title: r.title,
-        description: r.description,
-        fee: 0,
-        time_threshold: r.time_threshold,
-        flags: r.flags,
-        mutually_exclusive_with: (r as any).mutually_exclusive_with || [],
-        reference_docs: (r as any).reference_docs || [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        sim: r.bm25,
-      } as any));
+      const rowsForRanker = rows.map(
+        (r) =>
+          ({
+            code: r.code,
+            title: r.title,
+            description: r.description,
+            fee: 0,
+            time_threshold: r.time_threshold,
+            flags: r.flags,
+            mutually_exclusive_with: (r as any).mutually_exclusive_with || [],
+            reference_docs: (r as any).reference_docs || [],
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            sim: r.bm25,
+          }) as any
+      );
 
-      const ranked = this.ranker.rank({ rows: rowsForRanker, signals: signalsInternal, topN });
+      const ranked = this.ranker.rank({
+        rows: rowsForRanker,
+        signals: signalsInternal,
+        topN,
+      });
       const withRules = ranked.map((c) => {
-        const original = rowsForRanker.find((r) => String(r.code) === String(c.code));
+        const original = rowsForRanker.find(
+          (r) => String(r.code) === String(c.code)
+        );
         const { ruleResults, compliance } = this.rules.evaluate({
           note: {
             mode: signalsInternal.mode,
@@ -89,7 +103,7 @@ export class SuggestService {
       const response: SuggestResponse = {
         candidates: explained,
         signals: {
-          duration: signalsInternal.duration ?? (Date.now() - started),
+          duration: signalsInternal.duration ?? Date.now() - started,
           mode: signalsInternal.mode,
           after_hours: signalsInternal.afterHours,
           chronic: signalsInternal.chronic,
@@ -98,13 +112,13 @@ export class SuggestService {
 
       return response;
     } catch (error) {
-      this.logger.error('Error in suggest service:', error);
+      this.logger.error("Error in suggest service:", error);
       const fallback: SuggestCandidate[] = [];
       return {
         candidates: fallback,
         signals: {
           duration: Date.now() - started,
-          mode: 'fast',
+          mode: "fast",
           after_hours: false,
           chronic: false,
         },
