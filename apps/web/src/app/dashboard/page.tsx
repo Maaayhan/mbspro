@@ -76,6 +76,7 @@ type FilterState = {
   dateRange: string;
   provider: string;
   item: string;
+  chartType: string;
   fromDate?: string;
   toDate?: string;
 };
@@ -85,49 +86,65 @@ export default function DashboardPage() {
   const [filters, setFilters] = useState<FilterState>({
     dateRange: 'Last 30 days',
     provider: 'All',
-    item: 'All'
+    item: 'All',
+    chartType: 'revenue'
   })
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [selectedKPI, setSelectedKPI] = useState<string | null>(null)
 
-  // Mock data
-  const mockData: DashboardData = useMemo(() => ({
-    kpis: {
-      totalClaims: 1247,
-      errorRate: 0.023,
-      revenue: 82400,
-      complianceScore: 0.977
-    },
-    revenueTrend: [
-      { month: 'Jan', value: 12400 },
-      { month: 'Feb', value: 13800 },
-      { month: 'Mar', value: 15200 },
-      { month: 'Apr', value: 14600 },
-      { month: 'May', value: 16800 },
-      { month: 'Jun', value: 18200 },
-    ],
-    topItems: [
+  const getTopItems = (items: TopItem[], sortBy: 'count' | 'revenue', topN: number = 7): TopItem[] => {
+    return items
+      .slice() // 创建副本
+      .sort((a, b) => b[sortBy] - a[sortBy]) // 降序排序
+      .slice(0, topN); // 取前N个
+  };
+
+  const mockData: DashboardData = useMemo(() => {
+    const allItems: TopItem[] = [
       { code: '23', title: 'Consultation Level A', count: 145, revenue: 6003 },
       { code: '36', title: 'Consultation Level C', count: 89, revenue: 7614 },
       { code: '721', title: 'Health Assessment', count: 67, revenue: 4489 },
       { code: '11700', title: 'ECG', count: 54, revenue: 1434 },
       { code: '2713', title: 'Mental Health', count: 42, revenue: 4284 },
-    ],
-    auditRows: [
-      { date: '2024-01-15', claimId: 'CLM-2024-001523', provider: 'Dr. Smith', items: '23, 36', reason: 'Insufficient documentation', status: 'Rejected' },
-      { date: '2024-01-14', claimId: 'CLM-2024-001522', provider: 'Dr. Lee', items: '11700', reason: 'Time interval violation', status: 'Flagged' },
-      { date: '2024-01-13', claimId: 'CLM-2024-001521', provider: 'Dr. Smith', items: '721', reason: 'Patient eligibility issue', status: 'Rejected' },
-      { date: '2024-01-12', claimId: 'CLM-2024-001520', provider: 'Dr. Wilson', items: '2713', reason: 'Incorrect code selection', status: 'Flagged' },
-    ],
-    rules: [
-      { id: 'R001', name: 'Documentation Completeness', status: 'ok', reason: 'All required fields documented' },
-      { id: 'R002', name: 'Time Interval Compliance', status: 'warning', reason: '2 claims with potential time violations' },
-      { id: 'R003', name: 'Patient Eligibility', status: 'ok', reason: 'All patients meet eligibility criteria' },
-      { id: 'R004', name: 'Code Accuracy', status: 'fail', reason: '5 claims with incorrect code selection' },
-      { id: 'R005', name: 'Billing Rules', status: 'ok', reason: 'All billing rules followed correctly' },
-    ]
-  }), [])
+      { code: '58503', title: 'Chest X-ray', count: 38, revenue: 2797 },
+      { code: '11506', title: 'Pathology Test', count: 35, revenue: 892 },
+      { code: '16400', title: 'Ultrasound', count: 32, revenue: 3456 },
+      { code: '30000', title: 'Surgery Minor', count: 28, revenue: 1234 },
+      { code: '11000', title: 'Blood Test', count: 25, revenue: 567 },
+    ];
+
+    return {
+      kpis: {
+        totalClaims: 1247,
+        errorRate: 0.023,
+        revenue: 82400,
+        complianceScore: 0.977
+      },
+      revenueTrend: [
+        { month: 'Jan', value: 12400 },
+        { month: 'Feb', value: 13800 },
+        { month: 'Mar', value: 15200 },
+        { month: 'Apr', value: 14600 },
+        { month: 'May', value: 16800 },
+        { month: 'Jun', value: 18200 },
+      ],
+      topItems: getTopItems(allItems, 'revenue'), // 默认按收入取前5名
+      auditRows: [
+        { date: '2024-01-15', claimId: 'CLM-2024-001523', provider: 'Dr. Smith', items: '23, 36', reason: 'Insufficient documentation', status: 'Rejected' },
+        { date: '2024-01-14', claimId: 'CLM-2024-001522', provider: 'Dr. Lee', items: '11700', reason: 'Time interval violation', status: 'Flagged' },
+        { date: '2024-01-13', claimId: 'CLM-2024-001521', provider: 'Dr. Smith', items: '721', reason: 'Patient eligibility issue', status: 'Rejected' },
+        { date: '2024-01-12', claimId: 'CLM-2024-001520', provider: 'Dr. Wilson', items: '2713', reason: 'Incorrect code selection', status: 'Flagged' },
+      ],
+      rules: [
+        { id: 'R001', name: 'Documentation Completeness', status: 'ok', reason: 'All required fields documented' },
+        { id: 'R002', name: 'Time Interval Compliance', status: 'warning', reason: '2 claims with potential time violations' },
+        { id: 'R003', name: 'Patient Eligibility', status: 'ok', reason: 'All patients meet eligibility criteria' },
+        { id: 'R004', name: 'Code Accuracy', status: 'fail', reason: '5 claims with incorrect code selection' },
+        { id: 'R005', name: 'Billing Rules', status: 'ok', reason: 'All billing rules followed correctly' },
+      ]
+    }
+  }, []);
 
   const errorReasonsData = [
     { name: 'Documentation', value: 35, color: '#ef4444' },
@@ -417,12 +434,24 @@ export default function DashboardPage() {
           {/* Revenue Trend */}
           <div className="card">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Trend</h3>
-            <div className="h-80">
+            <div className="h-96">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={dashboardData.revenueTrend.map(item => ({ month: item.month, revenue: item.value }))}>
+                <LineChart 
+                  data={dashboardData.revenueTrend.map(item => ({ month: item.month, revenue: item.value }))}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 15 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="month" stroke="#6b7280" />
-                  <YAxis stroke="#6b7280" />
+                  <XAxis 
+                    dataKey="month" 
+                    stroke="#6b7280" 
+                    padding={{ left: 25, right: 25 }}
+                  />
+                  <YAxis 
+                    stroke="#6b7280"
+                    domain={['auto', 'auto']}
+                    padding={{ top: 10, bottom: 10 }}
+                    tickFormatter={(value) => `$${Number(value).toLocaleString()}`}
+                  />
                   <Tooltip 
                     contentStyle={{ 
                       backgroundColor: 'white', 
@@ -448,48 +477,73 @@ export default function DashboardPage() {
           <div className="card">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Top MBS Items</h3>
-              <div className="flex items-center space-x-4 text-sm text-gray-500">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-teal-500 rounded"></div>
-                  <span>Claims</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                  <span>Revenue</span>
-                </div>
+              <div className="flex items-center space-x-3">
+                <select
+                  value={filters.chartType || 'revenue'}
+                  onChange={(e) => setFilters(prev => ({ ...prev, chartType: e.target.value }))}
+                  className="bg-white border border-gray-300 text-gray-700 text-sm rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="revenue">Revenue</option>
+                  <option value="claims">Claims</option>
+                </select>
               </div>
             </div>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dashboardData.topItems} layout="horizontal">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis type="number" stroke="#6b7280" />
-                  <YAxis 
-                    type="category" 
-                    dataKey="code" 
-                    stroke="#6b7280"
-                    width={60}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'white', 
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                    }}
-                    formatter={(value, name) => [
-                      name === 'count' ? `${value} claims` : `$${Number(value).toLocaleString()}`,
-                      name === 'count' ? 'Claims' : 'Revenue'
-                    ]}
-                    labelFormatter={(code) => {
-                      const item = dashboardData.topItems.find(i => i.code === code)
-                      return item ? `${code}: ${item.title}` : code
-                    }}
-                  />
-                  <Bar dataKey="count" fill="#14b8a6" radius={[0, 4, 4, 0]} />
-                  <Bar dataKey="revenue" fill="#3b82f6" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+            
+
+            
+            <div className="h-96">
+              {dashboardData.topItems && dashboardData.topItems.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart 
+                    data={getTopItems(dashboardData.topItems, 
+                      filters.chartType === 'claims' ? 'count' : 'revenue'
+                    )}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 25 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="code" stroke="#6b7280" />
+                    <YAxis 
+                      stroke="#6b7280"
+                      tickFormatter={(value) => 
+                        filters.chartType === 'revenue' 
+                          ? `$${Number(value).toLocaleString()}` 
+                          : Number(value).toLocaleString()
+                      }
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'white', 
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                      }}
+                      formatter={(value) => [
+                        filters.chartType === 'claims' 
+                          ? `${value} claims` 
+                          : `$${Number(value).toLocaleString()}`,
+                        filters.chartType === 'claims' ? 'Claims' : 'Revenue'
+                      ]}
+                      labelFormatter={(code) => {
+                        const item = dashboardData.topItems.find(i => i.code === code)
+                        return item ? `${code}: ${item.title}` : code
+                      }}
+                    />
+                    <Bar 
+                      dataKey={filters.chartType === 'claims' ? 'count' : 'revenue'} 
+                      fill={filters.chartType === 'claims' ? '#3b82f6' : '#14b8a6'} 
+                      radius={[0, 4, 4, 0]}
+                      barSize={25}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                  <div className="text-center">
+                    <div className="text-lg font-medium mb-2">No data available</div>
+                    <div className="text-sm">Chart will appear when data is loaded</div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
