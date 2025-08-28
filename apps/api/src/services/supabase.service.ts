@@ -103,4 +103,43 @@ export class SupabaseService {
       throw error;
     }
   }
+
+  async getAllClaims(): Promise<any[]> {
+    try {
+      const { data, error } = await supabaseClient
+        .from("claims")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        this.logger.error("Error fetching claims:", error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      this.logger.error("Error in getAllClaims:", error);
+      throw error;
+    }
+  }
+
+  async createClaim(claimData: any): Promise<any> {
+    try {
+      const { data, error } = await supabaseClient
+        .from("claims")
+        .insert([claimData])
+        .select()
+        .single();
+
+      if (error) {
+        this.logger.error("Error creating claim:", error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      this.logger.error("Error in createClaim:", error);
+      throw error;
+    }
+  }
 }
