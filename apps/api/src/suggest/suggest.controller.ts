@@ -58,15 +58,32 @@ export class SuggestController {
   })
   async explainText(@Body() body: any) {
     const { code, title, rule_results, compliance } = body || {}
-    const fails = Array.isArray(rule_results) ? rule_results.filter((r: any) => r.status === 'fail') : []
-    const warns = Array.isArray(rule_results) ? rule_results.filter((r: any) => r.status === 'warn') : []
-    let summary = `${code || ''} — ${title || ''}. `
-    if (compliance === 'red') summary += 'Policy check: blocked. '
-    else if (compliance === 'amber') summary += 'Policy check: needs review. '
-    else summary += 'Policy check: ok. '
-    if (fails.length) summary += `Failed: ${fails.slice(0,3).map((r:any)=>r.id).join(', ')}. `
-    if (warns.length) summary += `Warnings: ${warns.slice(0,3).map((r:any)=>r.id).join(', ')}. `
-    return { ok: true, text: summary.trim() }
+    const results = Array.isArray(rule_results) ? rule_results : []
+    const fails = results.filter((r: any) => r.status === 'fail')
+    const warns = results.filter((r: any) => r.status === 'warn')
+
+    const lines: string[] = []
+    lines.push(`${code || ''} — ${title || ''}.`)
+    if (compliance === 'red') lines.push('Policy check: blocked.')
+    else if (compliance === 'amber') lines.push('Policy check: needs review.')
+    else lines.push('Policy check: ok.')
+
+    if (fails.length > 0) {
+      const why = fails.slice(0, 2).map((r: any) => `${r.id}: ${r.reason || 'not satisfied'}`).join(' | ')
+      lines.push(`Failing rules → ${why}`)
+    }
+    if (warns.length > 0) {
+      const why = warns.slice(0, 2).map((r: any) => `${r.id}: ${r.reason || 'check details'}`).join(' | ')
+      lines.push(`Warnings → ${why}`)
+    }
+
+    const req = results.find((r: any) => r.id === 'required_elements' && r.status !== 'pass')
+    if (req && typeof req.reason === 'string') {
+      const m = req.reason.match(/Missing elements:\s*(.*)$/i)
+      if (m && m[1]) lines.push(`Add documentation: ${m[1]}.`)
+    }
+
+    return { ok: true, text: lines.join(' ') }
   }
 
   @Post('alternatives')

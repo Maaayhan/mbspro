@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { FunnelIcon, CalendarIcon, UserIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 
 type FilterState = {
@@ -17,7 +17,51 @@ interface DashboardFiltersProps {
   onChange: (filters: FilterState) => void
 }
 
+interface Provider {
+  provider_number: string;
+  full_name: string;
+}
+
+interface Item {
+  code: string;
+  title: string;
+  count: number;
+}
+
 export default function DashboardFilters({ filters, onChange }: DashboardFiltersProps) {
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const apiBase = (process.env.NEXT_PUBLIC_API_BASE || "http://localhost:4000").replace(/\/$/, "");
+        
+        const [providersResponse, itemsResponse] = await Promise.all([
+          fetch(`${apiBase}/api/claim/providers`),
+          fetch(`${apiBase}/api/claim/items?top=5`)
+        ]);
+
+        if (providersResponse.ok) {
+          const providersData = await providersResponse.json();
+          setProviders(providersData);
+        }
+
+        if (itemsResponse.ok) {
+          const itemsData = await itemsResponse.json();
+          setItems(itemsData);
+        }
+      } catch (error) {
+        console.error('Failed to fetch filter data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   const handleFilterChange = (key: keyof FilterState, value: string) => {
     onChange({
       ...filters,
@@ -37,17 +81,16 @@ export default function DashboardFilters({ filters, onChange }: DashboardFilters
         {/* Filter Controls - Horizontal Layout */}
         <div className="flex items-center space-x-3">
           {/* Date Range Filter */}
-          <div className="flex items-center space-x-1.5">
+          <div className="flex items-center space-x-1.5 h-6 w-25">
             <CalendarIcon className="h-4 w-4 text-gray-400" />
             <select
               value={filters.dateRange}
               onChange={(e) => handleFilterChange('dateRange', e.target.value)}
-              className="bg-gray-50 border-0 text-gray-700 text-xs rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-primary-500 focus:bg-white transition-colors min-w-[110px]"
+              className="bg-gray-50 border-0 text-gray-700 text-xs rounded-lg px-1.5 py-1.5 focus:ring-2 focus:ring-primary-500 focus:bg-white transition-colors min-w-[110px] max-w-[130px] truncate"
             >
               <option value="Last 30 days">Last 30 days</option>
               <option value="Last 90 days">Last 90 days</option>
-              <option value="This month">This month</option>
-              <option value="Custom...">Custom...</option>
+              <option value="Last 180 days">Last 180 days</option>
             </select>
           </div>
 
@@ -60,14 +103,15 @@ export default function DashboardFilters({ filters, onChange }: DashboardFilters
             <select
               value={filters.provider}
               onChange={(e) => handleFilterChange('provider', e.target.value)}
-              className="bg-gray-50 border-0 text-gray-700 text-xs rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-primary-500 focus:bg-white transition-colors min-w-[100px]"
+              className="bg-gray-50 border-0 text-gray-700 text-xs rounded-lg px-1.5 py-1.5 focus:ring-2 focus:ring-primary-500 focus:bg-white transition-colors min-w-[110px] max-w-[160px] truncate"
+              disabled={loading}
             >
               <option value="All">All Providers</option>
-              <option value="Dr. Smith">Dr. Smith</option>
-              <option value="Dr. Lee">Dr. Lee</option>
-              <option value="Dr. Wilson">Dr. Wilson</option>
-              <option value="Dr. Davis">Dr. Davis</option>
-              <option value="Dr. Jones">Dr. Jones</option>
+              {providers.map((provider) => (
+                <option key={provider.provider_number} value={provider.provider_number}>
+                  {provider.provider_number} - {provider.full_name.length > 10 ? provider.full_name.slice(0, 10) + '...' : provider.full_name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -80,17 +124,15 @@ export default function DashboardFilters({ filters, onChange }: DashboardFilters
             <select
               value={filters.item}
               onChange={(e) => handleFilterChange('item', e.target.value)}
-              className="bg-gray-50 border-0 text-gray-700 text-xs rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-primary-500 focus:bg-white transition-colors min-w-[140px]"
+              className="bg-gray-50 border-0 text-gray-700 text-xs rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-primary-500 focus:bg-white transition-colors min-w-[110px] max-w-[170px] truncate"
+              disabled={loading}
             >
               <option value="All">All Items</option>
-              <option value="23">23 - Consultation Level A</option>
-              <option value="36">36 - Consultation Level C</option>
-              <option value="721">721 - Health Assessment</option>
-              <option value="11700">11700 - ECG</option>
-              <option value="2713">2713 - Mental Health</option>
-              <option value="58503">58503 - Chest X-ray</option>
-              <option value="11506">11506 - Pathology Test</option>
-              <option value="16400">16400 - Ultrasound</option>
+              {items.map((item) => (
+                <option key={item.code} value={item.code}>
+                  {item.code} - {item.title.length > 15 ? item.title.slice(0, 15) + '...' : item.title} ({item.count})
+                </option>
+              ))}
             </select>
           </div>
         </div>

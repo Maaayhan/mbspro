@@ -8,6 +8,13 @@ export type SwapAlt = {
   fee?: number
   policy: { status: 'green'|'amber'|'red'|string; reason: string }
   selection: { blocked?: boolean; warnings?: string[]; conflicts?: Array<{ code: string; with: string[] }> }
+  // candidate details for replacement
+  rule_results?: any[]
+  compliance?: string
+  confidence?: number
+  feature_hits?: string[]
+  score?: number
+  score_breakdown?: Record<string, number>
 }
 
 type Props = {
@@ -24,6 +31,7 @@ export default function SwapPanel({ open, onClose, code, title, note, selectedCo
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [alts, setAlts] = useState<SwapAlt[]>([])
+  const [autoRemoveConflicts, setAutoRemoveConflicts] = useState(true)
 
   useEffect(() => {
     if (!open) return
@@ -37,7 +45,13 @@ export default function SwapPanel({ open, onClose, code, title, note, selectedCo
         })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = await res.json()
-        setAlts(Array.isArray(data?.alternatives) ? data.alternatives : [])
+        const arr = Array.isArray(data?.alternatives) ? data.alternatives : []
+        // filter: exclude items already visible in top suggestions (selectedCodes isn't the same; ask caller to pass visible suggestions? Use heuristic: exclude currentCode and duplicates by code in selectedCodes and also those in window.suggestVisible if provided)
+        const visible: string[] = Array.isArray((window as any)?.__suggestVisible)
+          ? ((window as any).__suggestVisible as string[])
+          : []
+        const filtered = arr.filter((a: any) => a && a.code && a.code !== code && !selectedCodes.includes(a.code) && !visible.includes(a.code))
+        setAlts(filtered)
       } catch (e: any) {
         setError(e?.message || 'Failed to load alternatives')
       } finally {
@@ -59,6 +73,11 @@ export default function SwapPanel({ open, onClose, code, title, note, selectedCo
             <div className="text-lg font-semibold text-gray-900">{code} — {title}</div>
           </div>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">✕</button>
+        </div>
+
+        <div className="mb-3 flex items-center gap-2">
+          <input id="auto-remove-conflicts" type="checkbox" className="rounded border-gray-300" checked={autoRemoveConflicts} onChange={(e) => setAutoRemoveConflicts(e.target.checked)} />
+          <label htmlFor="auto-remove-conflicts" className="text-sm text-gray-700">Auto remove conflicting items</label>
         </div>
 
         {loading && <div className="text-gray-600 text-sm">Loading alternatives…</div>}
@@ -87,7 +106,7 @@ export default function SwapPanel({ open, onClose, code, title, note, selectedCo
                 <div className="flex flex-col items-end gap-2">
                   <div className="text-sm text-gray-700">{typeof a.fee==='number' ? `$${a.fee.toFixed(2)}` : ''}</div>
                   {!a.selection?.blocked ? (
-                    <button onClick={() => onReplace(a)} className="bg-primary-600 hover:bg-primary-700 text-white text-xs px-3 py-1 rounded">Replace</button>
+                    <button onClick={() => onReplace(a, { removeConflicts: autoRemoveConflicts })} className="bg-primary-600 hover:bg-primary-700 text-white text-xs px-3 py-1 rounded">Replace</button>
                   ) : (
                     <button onClick={() => onReplace(a, { removeConflicts: true })} className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded">Force Replace</button>
                   )}

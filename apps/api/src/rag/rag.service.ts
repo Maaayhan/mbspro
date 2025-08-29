@@ -37,6 +37,22 @@ export class RagService {
     });
 
     this.cohere = process.env.COHERE_API_KEY ? new CohereClient({ token: process.env.COHERE_API_KEY }) : null;
+    this.logger.log(
+      `RAG init: pinecone index=${indexName}, embedModel=${embedModel}, cohere=${this.cohere ? 'on' : 'off'}`
+    );
+  }
+
+  getStatus() {
+    const indexName = process.env.PINECONE_INDEX || 'mbspro-langchain-api';
+    const cohereModel = process.env.COHERE_RERANK_MODEL || 'rerank-english-v3.0';
+    const rerankCandidates = parseInt(process.env.RERANK_CANDIDATES || '60') || 60;
+    return {
+      pineconeConfigured: !!process.env.PINECONE_API_KEY,
+      cohereConfigured: !!process.env.COHERE_API_KEY,
+      indexName,
+      cohereModel,
+      rerankCandidates,
+    };
   }
 
   async ingestFromJsonFile(filename: string): Promise<{ chunks: number }> {
@@ -79,17 +95,24 @@ export class RagService {
 
     let reranked: { doc: any; score: number }[] = candidateDocs.map((d: any) => ({ doc: d, score: 0 }));
     if (this.cohere) {
+      const topN = Math.min(candidateDocs.length, Math.max(topK + 3, topK));
+      this.logger.log(
+        `RAG rerank: using Cohere model=${COHERE_MODEL}, candidates=${candidateDocs.length}, topN=${topN}`
+      );
       const rerankResp: any = await this.cohere.rerank({
         model: COHERE_MODEL,
         query,
         documents: candidateDocs.map((d) => ({ text: d.pageContent })),
-        topN: Math.min(candidateDocs.length, Math.max(topK + 3, topK)),
+        topN,
       });
       const resultsArray = (rerankResp?.results || []).map((r: any) => ({ index: r.index, score: r.relevanceScore ?? r.relevance_score ?? 0 }));
       reranked = resultsArray
         .filter((r: any) => r.index >= 0 && r.index < candidateDocs.length)
         .map((r: any) => ({ doc: candidateDocs[r.index], score: r.score }))
         .sort((a: any, b: any) => b.score - a.score);
+      this.logger.log(`RAG rerank: results=${resultsArray.length}`);
+    } else {
+      this.logger.log('RAG rerank: skipped (Cohere not configured)');
     }
 
     const contextLimit = Math.min(topK + 3, reranked.length);

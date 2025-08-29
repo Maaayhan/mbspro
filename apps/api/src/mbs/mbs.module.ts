@@ -8,10 +8,11 @@ import { MetricsService } from './metrics.service';
 import { AuditLogService } from './audit-log.service';
 import { MbsAdminController } from './admin.controller';
 import { MetricsController } from './metrics.controller';
+import { SupabaseService } from '../services/supabase.service';
 
 @Module({
   controllers: [MbsCodesController, MbsAdminController, MetricsController],
-  providers: [MbsCodesService, MbsExtractorService, LexicalRetrieverService, KBRulesLoader, MetricsService, AuditLogService],
+  providers: [MbsCodesService, MbsExtractorService, LexicalRetrieverService, KBRulesLoader, MetricsService, AuditLogService, SupabaseService],
   exports: [KBRulesLoader, MetricsService],
 })
 export class MbsModule {}

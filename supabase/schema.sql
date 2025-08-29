@@ -137,3 +137,46 @@ GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
 GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated;
+
+-- Enable extension
+create extension if not exists pgcrypto;
+
+-- =============================
+-- Patient / Practitioner / Organization tables
+-- =============================
+
+CREATE TABLE IF NOT EXISTS mbs_organizations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  hpio TEXT,
+  phone TEXT,
+  address TEXT,
+  fhir JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS mbs_practitioners (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  full_name TEXT NOT NULL,
+  specialty TEXT,
+  hpii TEXT,
+  provider_number TEXT,
+  phone TEXT,
+  organization_id uuid REFERENCES mbs_organizations(id) ON DELETE SET NULL,
+  fhir JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS mbs_patients (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  full_name TEXT NOT NULL,
+  gender TEXT CHECK (gender IN ('male','female','other','unknown')),
+  dob DATE,
+  medicare_number TEXT,
+  phone TEXT,
+  address TEXT,
+  managing_org_id uuid REFERENCES mbs_organizations(id) ON DELETE SET NULL,
+  gp_id uuid REFERENCES mbs_practitioners(id) ON DELETE SET NULL,
+  fhir JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
