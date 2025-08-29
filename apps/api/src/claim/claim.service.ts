@@ -101,9 +101,12 @@ export class ClaimService {
 
   /** Build and submit a single Claim (requires frontend to provide encounterId) */
   async buildAndSubmit(dto: BuildClaimDto) {
-    if (!dto.selected?.length) {
-      throw new BadRequestException("selected items must not be empty");
-    }
+    try {
+      // 验证输入数据
+      if (!dto.selected?.length) {
+        console.warn('❌ No selected items in claim');
+        throw new BadRequestException("selected items must not be empty");
+      }
 
     const currency = dto.currency ?? "AUD";
     const codes = dto.selected.map((s) => s.code);
@@ -133,38 +136,75 @@ export class ClaimService {
       notes: notes.length > 0 ? notes : undefined,
     });
 
-    // Store claim in Supabase
-    const claimData = {
-      patient_id: dto.patientId,
-      practitioner_id: dto.practitionerId,
-      encounter_id: dto.encounterId,
-      items: dto.selected,
-      total_amount: total,
-      currency: currency,
-      notes: dto.meta?.rawNote || "",
-      status: "submitted",
-      fhir_data: claim, // Store FHIR data for validation
-      created_at: new Date().toISOString(),
-    };
+      // Store claim in Supabase
+      const claimData = {
+        patient_id: dto.patientId,
+        practitioner_id: dto.practitionerId,
+        encounter_id: dto.encounterId,
+        items: dto.selected,
+        total_amount: total,
+        currency: currency,
+        notes: dto.meta?.rawNote || "",
+        status: "submitted",
+        fhir_data: claim, // Store FHIR data for validation
+        submission_status: "success" as const, // 默认为成功
+        submission_error_reason: null,
+        created_at: new Date().toISOString(),
+      };
 
     const created = await this.supa.createClaim(claimData);
 
-    // Optionally validate FHIR format with HAPI (but don't store there)
-    let hapiValidation = null;
-    try {
-      hapiValidation = await postResource(claim);
-    } catch (error) {
-      console.warn(
-        "HAPI validation failed, but claim saved to Supabase:",
-        error
-      );
-    }
+      try {
+        const created = await this.supa.createClaim(claimData);
+        console.log('✅ Claim Successfully Stored in Supabase');
 
-    return {
-      claim,
-      supabase: created,
-      hapi: hapiValidation,
-    };
+        return {
+          claim: created,
+          fhir: claim,
+        };
+      } catch (storageError) {
+        console.error('❌ Supabase Storage Error:', storageError);
+        throw storageError;
+      }
+    } catch (error) {
+      // 如果发生错误，记录错误并存储失败的 Claim
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('❌ Claim Submission Error:', errorMessage);
+      console.error('Full Error Object:', error);
+
+      const failedClaimData = {
+        patient_id: dto.patientId,
+        practitioner_id: dto.practitionerId,
+        encounter_id: dto.encounterId,
+        items: dto.selected,
+        total_amount: 0, // 可能无法计算总金额
+        currency: dto.currency ?? "AUD",
+        notes: dto.meta?.rawNote || "",
+        status: "failed",
+        submission_status: "failed" as const,
+        submission_error_reason: errorMessage,
+        created_at: new Date().toISOString(),
+      };
+
+      try {
+        const failedClaim = await this.supa.createClaim(failedClaimData);
+        console.log('⚠️ Failed Claim Stored in Supabase:', JSON.stringify(failedClaim, null, 2));
+
+        throw new BadRequestException({
+          message: "Claim submission failed",
+          error: errorMessage,
+          failedClaim,
+        });
+      } catch (storageError) {
+        console.error('❌ Failed to Store Failed Claim:', storageError);
+        
+        throw new BadRequestException({
+          message: "Claim submission failed",
+          error: errorMessage,
+          failedClaimData, // 使用原始的 failedClaimData
+        });
+      }
+    }
   }
 
   /** Automatically create Encounter + Claim transaction bundle  */
@@ -359,6 +399,146 @@ export class ClaimService {
     } catch (error) {
       console.error("Failed to get patient claims:", error);
       throw error;
+    }
+  }
+
+  /** Get all providers */
+  async getProviders() {
+    try {
+      const { data, error } = await this.supa.getClient()
+        .from('mbs_practitioners')
+        .select('provider_number, full_name')
+        .order('full_name');
+
+      if (error) {
+        console.error("Failed to get providers:", error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error("Failed to get providers:", error);
+      return [];
+    }
+  }
+
+  /** Get unique item codes from claims */
+  async getItems() {
+    try {
+      const { data, error } = await this.supa.getClient()
+        .from('claims')
+        .select('items')
+        .not('items', 'is', null);
+
+      if (error) {
+        console.error("Failed to get items:", error);
+        return [];
+      }
+
+      // Extract unique MBS codes from claims items
+      const itemCodes = new Set<string>();
+      data?.forEach(claim => {
+        if (claim.items && Array.isArray(claim.items)) {
+          claim.items.forEach((item: any) => {
+            if (item.code) {
+              itemCodes.add(item.code);
+            }
+          });
+        }
+      });
+
+      // Get MBS item details for these codes
+      const codes = Array.from(itemCodes);
+      if (codes.length === 0) {
+        return [];
+      }
+
+      const { data: mbsItems, error: mbsError } = await this.supa.getClient()
+        .from('mbs_items')
+        .select('code, title')
+        .in('code', codes)
+        .order('code');
+
+      if (mbsError) {
+        console.error("Failed to get MBS items:", mbsError);
+        return codes.map(code => ({ code, title: `Item ${code}` }));
+      }
+
+      return mbsItems || [];
+    } catch (error) {
+      console.error("Failed to get items:", error);
+      return [];
+    }
+  }
+
+  /** Get top MBS items from claims */
+  async getTopItems(top: number = 5) {
+    try {
+      // 直接从claims表中提取和聚合items
+      const { data, error } = await this.supa.getClient()
+        .from('claims')
+        .select('items')
+        .not('items', 'is', null);
+
+      if (error) {
+        console.error('Failed to get claims items:', error);
+        return [];
+      }
+
+      // 手动聚合和计算items
+      const itemStats: Record<string, { 
+        code: string; 
+        count: number; 
+        revenue: number; 
+        title?: string 
+      }> = {};
+
+      data.forEach(claim => {
+        if (claim.items && Array.isArray(claim.items)) {
+          claim.items.forEach((item: any) => {
+            const code = item.code;
+            const unitPrice = Number(item.unitPrice) || 0;
+
+            if (code && unitPrice > 0) {
+              if (!itemStats[code]) {
+                itemStats[code] = { 
+                  code, 
+                  count: 0, 
+                  revenue: 0 
+                };
+              }
+              
+              itemStats[code].count += 1;
+              itemStats[code].revenue += unitPrice;
+            }
+          });
+        }
+      });
+
+      // 转换为数组并排序
+      const sortedItems = Object.values(itemStats)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, top);
+
+      // 获取MBS项目的标题
+      const codes = sortedItems.map(item => item.code);
+      const { data: mbsItems } = await this.supa.getClient()
+        .from('mbs_items')
+        .select('code, title')
+        .in('code', codes);
+
+      // 合并标题
+      return sortedItems.map(item => {
+        const mbsItem = mbsItems?.find(m => m.code === item.code);
+        return {
+          ...item,
+          title: mbsItem?.title || `Item ${item.code}`
+        };
+      });
+
+    } catch (error) {
+      console.error('Error getting top items:', error);
+      return [];
     }
   }
 }

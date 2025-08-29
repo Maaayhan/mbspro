@@ -9,6 +9,7 @@ import { useClaimDraft } from "@/store/useClaimDraft";
 import { usePatients, usePractitioners } from "@/hooks/useSupabaseData";
 import { useDocumentGeneration } from "@/hooks/useDocumentGeneration";
 import { usePatientSelection } from "@/store/usePatientSelection";
+import { useSuggestResults } from "@/store/useSuggestResults";
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
@@ -46,6 +47,7 @@ interface FhirPreview {
 
 export default function ClaimBuilderPage() {
   const { draft, clear } = useClaimDraft();
+  const { clearCandidates: clearSuggestions } = useSuggestResults();
   const [selectedPatient, setSelectedPatient] = useState("");
   const [selectedProvider, setSelectedProvider] = useState("");
   
@@ -165,19 +167,92 @@ export default function ClaimBuilderPage() {
           },
         ];
 
-  const handleSubmitClaim = () => {
-    // Simulate successful claim submission
-    setNotification({
-      isOpen: true,
-      type: "success",
-      title: "Claim Submitted Successfully!",
-      message: "Your Medicare claim has been submitted and is being processed.",
-    });
+  const handleSubmitClaim = async () => {
+    // 验证必填字段
+    if (!selectedPatient || !selectedProvider) {
+      setNotification({
+        isOpen: true,
+        type: "warning",
+        title: "Missing Information",
+        message: "Please select a patient and provider",
+      });
+      return;
+    }
 
-    // Clear draft after successful submission
-    setTimeout(() => {
-      clear();
-    }, 1000); // delay 1 second to show the success message
+    if (claimItems.length === 0) {
+      setNotification({
+        isOpen: true,
+        type: "warning",
+        title: "Missing Information",
+        message: "Please select at least one MBS item",
+      });
+      return;
+    }
+
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000';
+      const response = await fetch(`${apiBase}/api/claim/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          patientId: selectedPatient,
+          practitionerId: selectedProvider,
+          encounterId: `enc-${Date.now()}`,
+          selected: claimItems.map((item) => ({
+            code: item.code,
+            display: item.title,
+            unitPrice: item.fee,
+            modifiers: item.modifiers,
+          })),
+          meta: {
+            rawNote: draft.notes,
+            durationMinutes: undefined,
+            visitType: "in_person",
+            ruleNotes: draft.quickRules.map((rule) => rule.reason),
+          },
+          currency: "AUD",
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Claim submission response:', data);
+
+      // Show success notification
+      setNotification({
+        isOpen: true,
+        type: "success",
+        title: "Claim Submitted Successfully!",
+        message: "Your Medicare claim has been submitted and is being processed.",
+      });
+
+      // Clear draft and suggestions after successful submission
+      setTimeout(() => {
+        clear(); // This clears notes, selected items, and quick rules
+        clearSuggestions(); // This clears suggestion candidates
+      }, 500); // delay 0.5 second to show the success message
+
+      return data;
+    } catch (error) {
+      console.error("Claim submission error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to submit claim";
+
+      // Show error notification
+      setNotification({
+        isOpen: true,
+        type: "error",
+        title: "Claim Submission Failed",
+        message: errorMessage,
+      });
+
+      throw error;
+    }
   };
 
   // Function to fetch FHIR data from API

@@ -30,6 +30,186 @@
     "references": ["MBS Guidelines 2023", "Extended Consultation Framework"]
   },
   {
+    "code": "721",
+    "title": "GP management plan",
+    "desc": "Preparation of a GP Management Plan for a patient with a chronic or terminal medical condition",
+    "fee": 132.00,
+    "timeThreshold": null,
+    "flags": { "telehealth": true, "after_hours": false, "management_plan": true },
+    "mutuallyExclusiveWith": ["723", "732"],
+    "references": ["Chronic Disease Guidelines", "Management Plan Standards", "Ongoing Care Protocols"]
+  },
+  {
+    "code": "723",
+    "title": "Team care arrangement",
+    "desc": "Preparation of a Team Care Arrangement involving multiple healthcare providers for coordinated patient care",
+    "fee": 112.00,
+    "timeThreshold": null,
+    "flags": { "telehealth": true, "after_hours": false, "team_care": true },
+    "mutuallyExclusiveWith": ["721", "732"],
+    "references": ["Team Care Guidelines", "Care Coordination Standards", "Multidisciplinary Care Protocols"]
+  },
+  {
+    "code": "732",
+    "title": "GP review of plan",
+    "desc": "Review of a GP Management Plan or Team Care Arrangement by a general practitioner",
+    "fee": 72.00,
+    "timeThreshold": null,
+    "flags": { "telehealth": true, "after_hours": false, "review": true },
+    "mutuallyExclusiveWith": ["721", "723"],
+    "references": ["Care Plan Guidelines", "Review Standards", "Ongoing Care Protocols"]
+  },
+  {
+    "code": "10997",
+    "title": "Allied health follow-up",
+    "desc": "Follow-up consultation by allied health professional for ongoing treatment and care",
+    "fee": 53.00,
+    "timeThreshold": null,
+    "flags": { "telehealth": true, "after_hours": false, "allied_health": true },
+    "mutuallyExclusiveWith": [],
+    "references": ["Allied Health Guidelines", "Follow-up Care Standards", "Rehabilitation Protocols"]
+  },
+  {
+    "code": "104",
+    "title": "Specialist consultation <20min",
+    "desc": "Professional attendance by a specialist for consultation lasting less than 20 minutes",
+    "fee": 85.00,
+    "timeThreshold": 20,
+    "flags": { "telehealth": true, "after_hours": false, "specialist": true, "referral_required": true },
+    "mutuallyExclusiveWith": ["105"],
+    "references": ["Specialist Guidelines", "Consultation Standards", "Referral Care Protocols"]
+  },
+  {
+    "code": "105",
+    "title": "Specialist consultation >20min",
+    "desc": "Professional attendance by a specialist for consultation lasting more than 20 minutes",
+    "fee": 150.00,
+    "timeThreshold": 20,
+    "flags": { "telehealth": true, "after_hours": false, "specialist": true, "referral_required": true },
+    "mutuallyExclusiveWith": ["104"],
+    "references": ["Specialist Guidelines", "Extended Consultation Standards", "Referral Care Protocols"]
+  },
+  {
+    "code": "58503",
+    "title": "Chest XR (lung fields)",
+    "desc": "Chest X-ray examination focused on lung fields for diagnostic imaging of respiratory system",
+    "fee": 54.10,
+    "timeThreshold": null,
+    "flags": { "telehealth": false, "after_hours": true, "imaging": true },
+    "mutuallyExclusiveWith": ["58506"],
+    "references": ["Radiology Guidelines", "Chest Imaging Standards", "Respiratory Diagnostic Protocols"]
+  },
+  {
+    "code": "58506",
+    "title": "Chest XR + fluoroscopy",
+    "desc": "Chest X-ray examination with fluoroscopy for real-time imaging of chest cavity and respiratory function",
+    "fee": 69.80,
+    "timeThreshold": null,
+    "flags": { "telehealth": false, "after_hours": true, "imaging": true },
+    "mutuallyExclusiveWith": ["58503"],
+    "references": ["Radiology Guidelines", "Advanced Chest Imaging Standards", "Fluoroscopy Protocols"]
+  },
+  {
+    "code": "55036",
+    "title": "Abdomen ultrasound",
+    "desc": "Ultrasound examination of abdomen including internal organs for diagnostic imaging",
+    "fee": 120.00,
+    "timeThreshold": null,
+    "flags": { "telehealth": false, "after_hours": false, "imaging": true },
+    "mutuallyExclusiveWith": ["16400"],
+    "references": ["Ultrasound Guidelines", "Abdominal Imaging Standards", "Non-invasive Diagnostic Protocols"]
+  },
+  {
+    "code": "63395",
+    "title": "MRI brain",
+    "desc": "Magnetic Resonance Imaging of the brain for detailed diagnostic imaging of neurological structures",
+    "fee": 720.00,
+    "timeThreshold": null,
+    "flags": { "telehealth": false, "after_hours": false, "imaging": true, "mri": true },
+    "mutuallyExclusiveWith": ["63390", "63400"],
+    "references": ["MRI Guidelines", "Neurological Imaging Standards", "Advanced Diagnostic Protocols"]
+  },
+  {
+    "code": "11505",
+    "title": "Spirometry full",
+    "desc": "Complete spirometry test including forced vital capacity and flow volume measurements for respiratory function assessment",
+    "fee": 42.40,
+    "timeThreshold": null,
+    "flags": { "telehealth": false, "after_hours": true, "diagnostic": true, "respiratory": true },
+    "mutuallyExclusiveWith": ["11506"],
+    "references": ["Respiratory Guidelines", "Spirometry Standards", "Lung Function Testing Protocols"]
+  },
+  {
+    "code": "2700",
+    "title": "Mental health treatment plan",
+    "desc": "Preparation of a GP Mental Health Treatment Plan for patients with mental health conditions",
+    "fee": 230.00,
+    "timeThreshold": null,
+    "flags": { "telehealth": true, "after_hours": false, "mental_health": true },
+    "mutuallyExclusiveWith": ["2701", "2703"],
+    "references": ["Mental Health Guidelines", "Treatment Plan Standards", "Mental Health Care Protocols"]
+  },
+  {
+    "code": "80000",
+    "title": "Clinical psychology consult",
+    "desc": "Professional consultation by clinical psychologist for psychological assessment and treatment planning",
+    "fee": 180.00,
+    "timeThreshold": 50,
+    "flags": { "telehealth": true, "after_hours": false, "psychology": true },
+    "mutuallyExclusiveWith": [],
+    "references": ["Psychology Guidelines", "Clinical Assessment Standards", "Mental Health Treatment Protocols"]
+  },
+  {
+    "code": "93000",
+    "title": "Dietitian consult",
+    "desc": "Professional consultation by dietitian for nutritional assessment and dietary planning",
+    "fee": 65.00,
+    "timeThreshold": 30,
+    "flags": { "telehealth": true, "after_hours": false, "nutrition": true },
+    "mutuallyExclusiveWith": [],
+    "references": ["Nutrition Guidelines", "Dietary Assessment Standards", "Nutritional Care Protocols"]
+  },
+  {
+    "code": "11700",
+    "title": "Electrocardiogram - 12 lead",
+    "desc": "12-lead electrocardiogram including interpretation and report to assess cardiac rhythm and function",
+    "fee": 26.55,
+    "timeThreshold": null,
+    "flags": { "telehealth": false, "after_hours": true, "diagnostic": true },
+    "mutuallyExclusiveWith": ["11701", "11705"],
+    "references": ["Cardiac Investigation Guidelines", "ECG Interpretation Standards", "Diagnostic Testing Protocols"]
+  },
+  {
+    "code": "2713",
+    "title": "Review of GP Mental Health Treatment Plan",
+    "desc": "Review of a GP Mental Health Treatment Plan by a general practitioner for ongoing mental health care",
+    "fee": 102.00,
+    "timeThreshold": null,
+    "flags": { "telehealth": true, "after_hours": false, "mental_health": true },
+    "mutuallyExclusiveWith": ["2700", "2715"],
+    "references": ["Mental Health Guidelines", "Treatment Plan Review Standards", "Ongoing Care Protocols"]
+  },
+  {
+    "code": "11506",
+    "title": "Blood collection for pathology testing",
+    "desc": "Collection of blood sample by venipuncture for pathology testing and laboratory analysis",
+    "fee": 25.50,
+    "timeThreshold": null,
+    "flags": { "telehealth": false, "after_hours": true, "pathology": true },
+    "mutuallyExclusiveWith": ["11505", "11510"],
+    "references": ["Pathology Guidelines", "Blood Collection Standards", "Laboratory Testing Protocols"]
+  },
+  {
+    "code": "16400",
+    "title": "Ultrasound examination of abdomen",
+    "desc": "Ultrasound examination of abdomen including kidneys, liver, gallbladder, pancreas and spleen - real time scanning",
+    "fee": 108.00,
+    "timeThreshold": null,
+    "flags": { "telehealth": false, "after_hours": false, "imaging": true },
+    "mutuallyExclusiveWith": ["55036"],
+    "references": ["Ultrasound Guidelines", "Abdominal Imaging Standards", "Non-invasive Diagnostic Protocols"]
+  },
+  {
     "code": "91800",
     "title": "Telehealth consultation by general practitioner",
     "desc": "Professional video consultation conducted by a general practitioner with a patient not physically present at the same location",
@@ -37,7 +217,7 @@
     "timeThreshold": 20,
     "flags": { "telehealth": true, "after_hours": false, "video_required": true },
     "mutuallyExclusiveWith": ["23", "91801"],
-    "references": ["Telehealth Guidelines 2023", "Video Consultation Standards", "Digital Health Requirements"]
+    "references": ["Telehealth Guidelines", "Video Consultation Standards", "Digital Health Requirements"]
   },
   {
     "code": "597",

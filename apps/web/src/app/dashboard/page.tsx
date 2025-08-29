@@ -12,6 +12,7 @@ import {
   ClockIcon,
   DocumentArrowDownIcon,
   XMarkIcon,
+  DocumentTextIcon,
 } from "@heroicons/react/24/outline";
 import {
   LineChart,
@@ -54,7 +55,7 @@ type KPIs = {
 };
 
 type RevenuePoint = { month: string; value: number };
-type TopItem = { code: string; title: string; count: number; revenue: number };
+type TopItem = { code: string; title: string; count: number; revenue: number; description?: string };
 type AuditRow = {
   date: string;
   claimId: string;
@@ -114,32 +115,32 @@ export default function DashboardPage() {
 
   const mockData: DashboardData = useMemo(() => {
     const allItems: TopItem[] = [
-      { code: "23", title: "Consultation Level A", count: 145, revenue: 6003 },
-      { code: "36", title: "Consultation Level C", count: 89, revenue: 7614 },
-      { code: "721", title: "Health Assessment", count: 67, revenue: 4489 },
-      { code: "11700", title: "ECG", count: 54, revenue: 1434 },
-      { code: "2713", title: "Mental Health", count: 42, revenue: 4284 },
-      { code: "58503", title: "Chest X-ray", count: 38, revenue: 2797 },
-      { code: "11506", title: "Pathology Test", count: 35, revenue: 892 },
-      { code: "16400", title: "Ultrasound", count: 32, revenue: 3456 },
-      { code: "30000", title: "Surgery Minor", count: 28, revenue: 1234 },
-      { code: "11000", title: "Blood Test", count: 25, revenue: 567 },
+      { code: "23", title: "Consultation Level A", count: 145, revenue: 6003, description: "Professional attendance by a general practitioner at consulting rooms for standard consultation" },
+      { code: "36", title: "Consultation Level C", count: 89, revenue: 7614, description: "Professional attendance by a general practitioner for complex consultation requiring detailed examination" },
+      { code: "721", title: "Health Assessment", count: 67, revenue: 4489, description: "Comprehensive health assessment including physical examination and health screening" },
+      { code: "11700", title: "ECG", count: 54, revenue: 1434, description: "Electrocardiogram to assess heart rhythm and detect cardiac abnormalities" },
+      { code: "2713", title: "Mental Health", count: 42, revenue: 4284, description: "Mental health treatment plan preparation and assessment by general practitioner" },
+      { code: "58503", title: "Chest X-ray", count: 38, revenue: 2797, description: "Chest radiograph to examine lungs, heart, and chest cavity for diagnostic purposes" },
+      { code: "11506", title: "Pathology Test", count: 35, revenue: 892, description: "Laboratory pathology testing and analysis for diagnostic investigation" },
+      { code: "16400", title: "Ultrasound", count: 32, revenue: 3456, description: "Ultrasound examination for non-invasive diagnostic imaging of internal organs" },
+      { code: "30000", title: "Surgery Minor", count: 28, revenue: 1234, description: "Minor surgical procedure performed in clinic or day surgery setting" },
+      { code: "11000", title: "Blood Test", count: 25, revenue: 567, description: "Blood collection and basic laboratory analysis for health monitoring" },
     ];
 
     return {
       kpis: {
-        totalClaims: 1247,
-        errorRate: 0.023,
-        revenue: 82400,
-        complianceScore: 0.977,
+        totalClaims: 0,
+        errorRate: 0,
+        revenue: 0,
+        complianceScore: 0,
       },
       revenueTrend: [
-        { month: "Jan", value: 12400 },
-        { month: "Feb", value: 13800 },
-        { month: "Mar", value: 15200 },
-        { month: "Apr", value: 14600 },
-        { month: "May", value: 16800 },
-        { month: "Jun", value: 18200 },
+        { month: "Jan", value: 45835 },
+        { month: "Feb", value: 42265 },
+        { month: "Mar", value: 49519 },
+        { month: "Apr", value: 42858 },
+        { month: "May", value: 43388 },
+        { month: "Jun", value: 37244 },
       ],
       topItems: getTopItems(allItems, "revenue"), // 默认按收入取前5名
       auditRows: [
@@ -220,40 +221,51 @@ export default function DashboardPage() {
   ];
 
   // Generate KPI cards from data
-  const getKPICards = (data: DashboardData): KPICard[] => [
-    {
-      key: "totalClaims",
-      title: "Total Claims",
-      value: data.kpis.totalClaims.toLocaleString(),
-      change: "+12.5%",
-      trend: "up",
-      description: "This month",
-    },
+  const getKPICards = (data: DashboardData): KPICard[] => {
+    const isFiltered = filters.provider !== "All" || filters.item !== "All" || filters.dateRange !== "Last 30 days";
+    const filterSuffix = isFiltered ? " (Filtered)" : "";
+    
+    // Calculate dynamic descriptions based on current filters
+    const getTimeDescription = () => {
+      if (isFiltered) return "Filtered period";
+      return filters.dateRange.toLowerCase();
+    };
+    
+    return [
+      {
+        key: "totalClaims",
+        title: `Total Claims${filterSuffix}`,
+        value: data.kpis.totalClaims.toLocaleString(),
+        change: data.kpis.totalClaims > 0 ? `${data.kpis.totalClaims} total` : "No data",
+        trend: "up",
+        description: getTimeDescription(),
+      },
     {
       key: "errorRate",
-      title: "Error/Reject Rate",
+      title: `Error/Reject Rate${filterSuffix}`,
       value: `${(data.kpis.errorRate * 100).toFixed(1)}%`,
-      change: "-0.8%",
-      trend: "down",
+      change: data.kpis.errorRate < 0.05 ? "Good" : "Needs attention",
+      trend: data.kpis.errorRate < 0.05 ? "down" : "up",
       description: "Industry avg: 4.1%",
     },
     {
       key: "revenue",
-      title: "Total Revenue",
+      title: `Total Revenue${filterSuffix}`,
       value: `$${Math.floor(data.kpis.revenue).toLocaleString()}`,
-      change: "+18.2%",
+      change: data.kpis.revenue > 0 ? "From successful claims" : "No revenue",
       trend: "up",
-      description: "Last 30 days",
+      description: getTimeDescription(),
     },
     {
       key: "complianceScore",
-      title: "Compliance Score",
+      title: `Compliance Score${filterSuffix}`,
       value: `${(data.kpis.complianceScore * 100).toFixed(1)}%`,
-      change: "+2.1%",
-      trend: "up",
-      description: "Above target",
+      change: data.kpis.complianceScore > 0.95 ? "Excellent" : data.kpis.complianceScore > 0.90 ? "Good" : "Needs work",
+      trend: data.kpis.complianceScore > 0.90 ? "up" : "down",
+      description: "Target: 95%+",
     },
   ];
+  };
 
   // API functions
   const fetchDashboardData = useCallback(
@@ -264,22 +276,22 @@ export default function DashboardPage() {
           process.env.NEXT_PUBLIC_API_BASE || "http://localhost:4000"
         ).replace(/\/$/, "");
 
-        // Fetch claims stats for total claims count
-        const claimsResponse = await fetch(`${apiBase}/api/claim/stats`);
-        let claimsStats = null;
-        if (claimsResponse.ok) {
-          claimsStats = await claimsResponse.json();
-        }
 
-        // Fetch metrics for other data
+
+        // Fetch metrics with filters
         const searchParams = new URLSearchParams();
         if (filterParams.fromDate)
           searchParams.set("from", filterParams.fromDate);
         if (filterParams.toDate) searchParams.set("to", filterParams.toDate);
-        if (filterParams.provider !== "All")
+        if (filterParams.provider && filterParams.provider !== "All")
           searchParams.set("provider", filterParams.provider);
-        if (filterParams.item !== "All")
+        if (filterParams.item && filterParams.item !== "All")
           searchParams.set("item", filterParams.item);
+        
+        // Always add type=errors for audit rows
+        searchParams.set("type", "errors");
+
+
 
         const metricsResponse = await fetch(
           `${apiBase}/api/metrics?${searchParams}`
@@ -288,17 +300,55 @@ export default function DashboardPage() {
 
         const metricsData = await metricsResponse.json();
 
-        // Merge claims stats with metrics data
-        const mergedData = {
-          ...metricsData,
-          kpis: {
-            ...metricsData.kpis,
-            totalClaims: claimsStats?.total || 0,
-            revenue: claimsStats?.totalAmount || metricsData.kpis.revenue,
-          },
-        };
 
-        setDashboardData(mergedData);
+        // Always fetch revenue trend for 180 days regardless of filter
+        const revenueTrendParams = new URLSearchParams();
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const fromDate180 = new Date(today.getTime() - 180 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split("T")[0];
+        const toDate180 = today.toISOString().split("T")[0];
+        
+        revenueTrendParams.set("from", fromDate180);
+        revenueTrendParams.set("to", toDate180);
+        // Don't apply item filter to revenue trend, but keep provider filter
+        if (filterParams.provider && filterParams.provider !== "All")
+          revenueTrendParams.set("provider", filterParams.provider);
+
+        const revenueTrendResponse = await fetch(
+          `${apiBase}/api/metrics?${revenueTrendParams}`
+        );
+        
+        // Fetch top items without item filter
+        const topItemsParams = new URLSearchParams();
+        if (filterParams.fromDate)
+          topItemsParams.set("from", filterParams.fromDate);
+        if (filterParams.toDate) 
+          topItemsParams.set("to", filterParams.toDate);
+        if (filterParams.provider && filterParams.provider !== "All")
+          topItemsParams.set("provider", filterParams.provider);
+        // Intentionally don't set item filter for top items
+
+        const topItemsResponse = await fetch(
+          `${apiBase}/api/metrics?${topItemsParams}`
+        );
+
+        let finalData = metricsData;
+        
+        // Override revenue trend with 180-day data
+        if (revenueTrendResponse.ok) {
+          const revenueTrendData = await revenueTrendResponse.json();
+          finalData.revenueTrend = revenueTrendData.revenueTrend;
+        }
+
+        // Override top items with unfiltered data
+        if (topItemsResponse.ok) {
+          const topItemsData = await topItemsResponse.json();
+          finalData.topItems = topItemsData.topItems;
+        }
+
+        setDashboardData(finalData);
       } catch (error) {
         console.warn("API failed, using mock data:", error);
         setDashboardData(mockData);
@@ -314,31 +364,45 @@ export default function DashboardPage() {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
+    let result;
     switch (range) {
       case "Last 30 days":
-        return {
+        result = {
           fromDate: new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
             .toISOString()
             .split("T")[0],
           toDate: today.toISOString().split("T")[0],
         };
+        break;
       case "Last 90 days":
-        return {
+        result = {
           fromDate: new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000)
             .toISOString()
             .split("T")[0],
           toDate: today.toISOString().split("T")[0],
         };
+        break;
+      case "Last 180 days":
+        result = {
+          fromDate: new Date(today.getTime() - 180 * 24 * 60 * 60 * 1000)
+            .toISOString()
+            .split("T")[0],
+          toDate: today.toISOString().split("T")[0],
+        };
+        break;
       case "This month":
-        return {
+        result = {
           fromDate: new Date(now.getFullYear(), now.getMonth(), 1)
             .toISOString()
             .split("T")[0],
           toDate: today.toISOString().split("T")[0],
         };
+        break;
       default:
-        return {};
+        result = {};
     }
+
+    return result;
   };
 
   // CSV Export function
@@ -378,8 +442,8 @@ export default function DashboardPage() {
 
   // Effects
   useEffect(() => {
-    const dateRange = getDateRange(filters.dateRange);
-    const updatedFilters = { ...filters, ...dateRange };
+    const dateRangeParams = getDateRange(filters.dateRange);
+    const updatedFilters = { ...filters, ...dateRangeParams };
     fetchDashboardData(updatedFilters);
   }, [filters, fetchDashboardData]);
 
@@ -486,6 +550,22 @@ export default function DashboardPage() {
                   {(dashboardData.kpis.complianceScore * 100).toFixed(1)}%
                   Compliance: All Recent Claims Follow MBS Guidelines.
                 </p>
+                {/* Active filters indicator */}
+                {(filters.provider !== "All" || filters.item !== "All") && (
+                  <div className="mt-2 flex items-center space-x-2">
+                    <span className="text-sm text-green-600 font-medium">Active filters:</span>
+                    {filters.provider !== "All" && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        Provider: {filters.provider}
+                      </span>
+                    )}
+                    {filters.item !== "All" && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                        Item: {filters.item}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -548,9 +628,14 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Revenue Trend */}
           <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Revenue Trend
-            </h3>
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Revenue Trend
+              </h3>
+              <p className="text-sm text-gray-600 mt-1">
+                Past 180 days (independent of date filter)
+              </p>
+            </div>
             <div className="h-96">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
@@ -601,23 +686,31 @@ export default function DashboardPage() {
           {/* Top MBS Items */}
           <div className="card">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Top MBS Items
-              </h3>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Top MBS Items
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  All items ranked (independent of item filter)
+                </p>
+              </div>
               <div className="flex items-center space-x-3">
-                <select
-                  value={filters.chartType || "revenue"}
-                  onChange={(e) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      chartType: e.target.value,
-                    }))
-                  }
-                  className="bg-white border border-gray-300 text-gray-700 text-sm rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                >
-                  <option value="revenue">Revenue</option>
-                  <option value="claims">Claims</option>
-                </select>
+                <div className="text-right">
+                  <p className="text-xs text-gray-500 mb-1">Sort by</p>
+                  <select
+                    value={filters.chartType || "revenue"}
+                    onChange={(e) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        chartType: e.target.value,
+                      }))
+                    }
+                    className="bg-white border border-gray-300 text-gray-700 text-sm rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  >
+                    <option value="revenue">Revenue</option>
+                    <option value="claims">Claims</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -659,6 +752,31 @@ export default function DashboardPage() {
                           (i) => i.code === code
                         );
                         return item ? `${code}: ${item.title}` : code;
+                      }}
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          const item = dashboardData.topItems.find(
+                            (i) => i.code === label
+                          );
+                          return (
+                            <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg max-w-sm">
+                              <p className="font-semibold text-gray-900">
+                                {label}: {item?.title}
+                              </p>
+                              {item?.description && item.description !== item?.title && (
+                                <p className="text-sm text-gray-600 mt-1 leading-relaxed">
+                                  {item.description}
+                                </p>
+                              )}
+                              <p className="text-sm font-medium mt-2 text-blue-600">
+                                {filters.chartType === "claims"
+                                  ? `${payload[0].value} claims`
+                                  : `$${Number(payload[0].value).toLocaleString()} revenue`}
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
                       }}
                     />
                     <Bar
@@ -775,74 +893,195 @@ export default function DashboardPage() {
             <h3 className="text-lg font-semibold text-gray-900">
               Errors / Rejects (Audit Detail)
             </h3>
-            <button
-              onClick={() =>
-                exportToCSV(dashboardData.auditRows, "audit-details.csv")
-              }
-              className="flex items-center space-x-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            >
-              <DocumentArrowDownIcon className="h-4 w-4" />
-              <span>Export CSV</span>
-            </button>
+            <div className="flex items-center space-x-2">
+              <div className="relative">
+                <button
+                  onClick={async () => {
+                    const apiBase = (process.env.NEXT_PUBLIC_API_BASE || "http://localhost:4000").replace(/\/$/, "");
+                    const searchParams = new URLSearchParams();
+                    
+                    // 计算日期范围
+                    const dateRangeParams = getDateRange(filters.dateRange);
+                    const currentFilters = { ...filters, ...dateRangeParams };
+                    
+                    // 应用当前的过滤器
+                    if (currentFilters.fromDate) searchParams.set('from', currentFilters.fromDate);
+                    if (currentFilters.toDate) searchParams.set('to', currentFilters.toDate);
+                    if (currentFilters.provider && currentFilters.provider !== 'All') searchParams.set('provider', currentFilters.provider);
+                    if (currentFilters.item && currentFilters.item !== 'All') searchParams.set('item', currentFilters.item);
+                    
+                    // 添加导出类型
+                    searchParams.set('type', 'errors');
+
+                    try {
+                      const response = await fetch(`${apiBase}/api/metrics/export/audit?${searchParams}`);
+                      
+                      if (response.status === 204) {
+                        alert('No error records found for the selected filters.');
+                        return;
+                      }
+
+                      if (!response.ok) {
+                        throw new Error('Failed to export audit data');
+                      }
+
+                      const blob = await response.blob();
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `audit_errors_${new Date().toISOString().split('T')[0]}.csv`;
+                      document.body.appendChild(a);
+                      a.click();
+                      a.remove();
+                      window.URL.revokeObjectURL(url);
+                    } catch (error) {
+                      console.error('Export error:', error);
+                      alert('Failed to export audit data');
+                    }
+                  }}
+                  className="flex items-center space-x-2 bg-red-100 text-red-700 hover:bg-red-200 px-3 py-2 rounded-lg text-xs font-medium transition-colors"
+                >
+                  <DocumentArrowDownIcon className="h-4 w-4" />
+                  <span>Export Errors</span>
+                </button>
+              </div>
+              <div className="relative">
+                <button
+                  onClick={async () => {
+                    const apiBase = (process.env.NEXT_PUBLIC_API_BASE || "http://localhost:4000").replace(/\/$/, "");
+                    const searchParams = new URLSearchParams();
+                    
+                    // 计算日期范围
+                    const dateRangeParams = getDateRange(filters.dateRange);
+                    const currentFilters = { ...filters, ...dateRangeParams };
+                    
+                    // 应用当前的过滤器
+                    if (currentFilters.fromDate) searchParams.set('from', currentFilters.fromDate);
+                    if (currentFilters.toDate) searchParams.set('to', currentFilters.toDate);
+                    if (currentFilters.provider && currentFilters.provider !== 'All') searchParams.set('provider', currentFilters.provider);
+                    if (currentFilters.item && currentFilters.item !== 'All') searchParams.set('item', currentFilters.item);
+                    
+                    // 添加导出类型
+                    searchParams.set('type', 'all');
+
+                    try {
+                      const response = await fetch(`${apiBase}/api/metrics/export/audit?${searchParams}`);
+                      
+                      if (response.status === 204) {
+                        alert('No records found for the selected filters.');
+                        return;
+                      }
+
+                      if (!response.ok) {
+                        throw new Error('Failed to export audit data');
+                      }
+
+                      const blob = await response.blob();
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `audit_all_${new Date().toISOString().split('T')[0]}.csv`;
+                      document.body.appendChild(a);
+                      a.click();
+                      a.remove();
+                      window.URL.revokeObjectURL(url);
+                    } catch (error) {
+                      console.error('Export error:', error);
+                      alert('Failed to export audit data');
+                    }
+                  }}
+                  className="flex items-center space-x-2 bg-primary-100 text-primary-700 hover:bg-primary-200 px-3 py-2 rounded-lg text-xs font-medium transition-colors"
+                >
+                  <DocumentArrowDownIcon className="h-4 w-4" />
+                  <span>Export All</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Claim ID
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Provider
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Item(s)
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Reason
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {dashboardData.auditRows.map((row, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {row.date}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-primary-600">
-                      {row.claimId}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {row.provider}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {row.items}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
-                      {row.reason}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          row.status === "Rejected"
-                            ? "bg-red-100 text-red-800"
-                            : "bg-yellow-100 text-yellow-800"
-                        }`}
-                      >
-                        {row.status}
-                      </span>
-                    </td>
+            {dashboardData.auditRows.length === 0 ? (
+              <div className="text-center py-8 bg-gray-50 rounded-lg">
+                <div className="flex flex-col items-center justify-center space-y-4">
+                  <DocumentTextIcon className="h-12 w-12 text-gray-400" />
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-700">
+                      No Audit Records Found
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-2">
+                      {filters.provider !== "All" || filters.item !== "All" || filters.dateRange !== "Last 30 days"
+                        ? "No records match the current filter criteria."
+                        : "There are no audit records to display."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Claim ID
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Provider
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Item(s)
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Reason
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {dashboardData.auditRows.slice(0, 6).map((row, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-900">
+                        {row.date}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-xs font-medium text-primary-600">
+                        {row.claimId}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-900">
+                        {row.provider}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-900">
+                        {row.items}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-900 max-w-[150px] truncate">
+                        {row.reason}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span
+                          className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            row.status === "Rejected"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-yellow-100 text-yellow-800"
+                          }`}
+                        >
+                          {row.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+
+            {dashboardData.auditRows.length > 6 && (
+              <div className="text-center mt-4">
+                <button className="text-primary-600 hover:text-primary-700 text-sm font-medium">
+                  View all audit details →
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
