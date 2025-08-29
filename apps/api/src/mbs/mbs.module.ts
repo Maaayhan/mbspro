@@ -7,9 +7,10 @@ import { KBRulesLoader } from './loader';
 import { MetricsService } from './metrics.service';
 import { AuditLogService } from './audit-log.service';
 import { MbsAdminController } from './admin.controller';
+import { MetricsController } from './metrics.controller';
 
 @Module({
-  controllers: [MbsCodesController, MbsAdminController],
+  controllers: [MbsCodesController, MbsAdminController, MetricsController],
   providers: [MbsCodesService, MbsExtractorService, LexicalRetrieverService, KBRulesLoader, MetricsService, AuditLogService],
   exports: [KBRulesLoader, MetricsService],
 })
