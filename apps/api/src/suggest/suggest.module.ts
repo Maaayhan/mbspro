@@ -9,9 +9,10 @@ import { RuleEngineService } from './rule-engine.service';
 import { RagModule } from '../rag/rag.module';
 import { MetricsService } from '../mbs/metrics.service';
 import { LexicalRetrieverService } from '../mbs/retriever.service';
+import { RulesModule } from '../rules/rules.module';
 
 @Module({
-  imports: [RagModule],
+  imports: [RagModule, RulesModule],
   controllers: [SuggestController],
   providers: [
     SuggestService,

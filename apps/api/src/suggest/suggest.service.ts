@@ -9,6 +9,7 @@ import { RuleEngineService } from "./rule-engine.service";
 import { RagService } from "../rag/rag.service";
 import { MetricsService } from "../mbs/metrics.service";
 import { LexicalRetrieverService } from "../mbs/retriever.service";
+import { RulesService } from "../rules/rules.service";
 
 @Injectable()
 export class SuggestService {
@@ -21,7 +22,8 @@ export class SuggestService {
     private readonly rules: RuleEngineService,
     private readonly rag: RagService,
     private readonly metrics: MetricsService,
-    private readonly lexical: LexicalRetrieverService
+    private readonly lexical: LexicalRetrieverService,
+    private readonly rulesSvc: RulesService,
   ) {}
 
   async suggest(request: SuggestRequestDto): Promise<SuggestResponseDto> {
@@ -349,5 +351,67 @@ export class SuggestService {
       this.metrics.recordRequest(Date.now() - started, { lowConfidence: true });
       return resp;
     }
+  }
+
+  async alternatives(body: any) {
+    const note: string = String(body?.note || '')
+    const currentCode = String(body?.currentCode || '')
+    const selectedCodes: string[] = Array.isArray(body?.selectedCodes) ? body.selectedCodes.map(String) : []
+    const topN = Number(body?.topN) > 0 ? Number(body.topN) : 10
+
+    // Use existing pipeline to gather candidates, then pick family/variants as alternatives
+    const resp = await this.suggest({ note, topN } as any)
+    const all = Array.isArray((resp as any).candidates) ? (resp as any).candidates : []
+    // Build family/variants from normalized rules when available
+    const normCurrent = this.rules.getNormalizedByCode(currentCode as any)
+    const familyCodes: Set<string> = new Set()
+    if (normCurrent) {
+      // family by explicit group or similar title keywords
+      if (Array.isArray(normCurrent.family)) normCurrent.family.forEach((x: any) => familyCodes.add(String(x)))
+      if (Array.isArray(normCurrent.variants)) normCurrent.variants.forEach((x: any) => familyCodes.add(String(x)))
+    }
+    // fallback: same leading two digits
+    const familyFallback = (code: string) => String(code).replace(/\D/g, '').slice(0, 2)
+    const baseFamily = familyFallback(currentCode)
+    const near = all.filter((c: any) => {
+      if (String(c.code) === currentCode) return false
+      if (familyCodes.size > 0) return familyCodes.has(String(c.code))
+      return familyFallback(String(c.code)) === baseFamily
+    })
+
+    // Evaluate selection-level conflicts for each alternative using existing rules service through our internal method
+    const alt = near.slice(0, topN).map((c: any) => {
+      const feeStr = (c.feature_hits || []).find((f: string) => f.startsWith('Fee:'))?.replace('Fee: $', '')
+      const fee = feeStr ? parseFloat(feeStr) : 0
+      // run selection-level validation with proposed set: selected - current + alt
+      const proposed = [...selectedCodes.filter((x) => String(x) !== currentCode), String(c.code)]
+      const sel = this.rulesSvc.validateSelection({ selectedCodes: proposed } as any)
+      const blocked = !!sel.blocked
+      const warnings: string[] = Array.isArray(sel.warnings) ? sel.warnings : []
+      const reason = (c.rule_results || []).filter((r: any) => r.status !== 'pass').slice(0,1).map((r: any) => r.reason).join(' ')
+      return {
+        code: c.code,
+        title: c.title,
+        fee,
+        policy: { status: c.compliance || 'green', reason },
+        selection: { blocked, warnings, conflicts: sel.conflicts || [] },
+        // expose candidate details so UI can replace suggestion card with full info
+        rule_results: c.rule_results || [],
+        compliance: c.compliance,
+        confidence: c.confidence,
+        feature_hits: c.feature_hits || [],
+        score: c.score,
+        score_breakdown: (c as any).score_breakdown || undefined,
+      }
+    })
+
+    // basic sorting: unblocked > blocked, then policy green>amber>red
+    const rank: Record<string, number> = { green: 0, amber: 1, red: 2 }
+    alt.sort((a: any, b: any) => {
+      if (a.selection.blocked !== b.selection.blocked) return a.selection.blocked ? 1 : -1
+      return (rank[a.policy.status] ?? 3) - (rank[b.policy.status] ?? 3)
+    })
+
+    return { ok: true, alternatives: alt }
   }
 }

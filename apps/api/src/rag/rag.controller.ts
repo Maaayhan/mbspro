@@ -29,6 +29,12 @@ export class RagController {
     const result = await this.rag.queryRag(String(body.query), Number(body.top) || 5);
     return result;
   }
+
+  @Get('status')
+  @HttpCode(HttpStatus.OK)
+  status() {
+    return this.rag.getStatus();
+  }
 }
 
 
