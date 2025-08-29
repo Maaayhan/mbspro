@@ -33,18 +33,8 @@ export class SuggestService {
       const signalsInternal = this.signalExtractor.extract(note);
       const topK = Math.max(30, topN * 10);
 
-      // Lexical + RAG retrieval
+      // RAG-only retrieval
       let rows: any[] = [];
-      let lexMap: Map<string, number> = new Map();
-      try {
-        const lexTop = Math.min(topK, 20);
-        const lex = this.lexical.retrieve(note, lexTop);
-        lexMap = new Map<string, number>(
-          lex.map((it: any) => [String(it.item.item), Number(it.score) || 0])
-        );
-      } catch (e) {
-        this.logger.warn(`Lexical retrieve failed: ${String(e)}`);
-      }
       try {
         const rag = await this.rag.queryRag(note, Math.min(topN + 3, 15));
         if (rag && Array.isArray((rag as any).results)) {
@@ -69,18 +59,18 @@ export class SuggestService {
       } catch (e) {
         this.logger.warn(`RAG query failed: ${String(e)}`);
       }
-      // Normalize bm25 across this query to [0,1] for better separation
-      const maxBm =
-        rows.length > 0
-          ? Math.max(...rows.map((r: any) => Number(r.bm25) || 0))
-          : 0;
-      if (maxBm > 0) {
-        rows = rows.map((r: any) => ({
-          ...r,
-          bm25n: Math.max(0, Math.min(1, (Number(r.bm25) || 0) / maxBm)),
-        }));
-      } else {
-        rows = rows.map((r: any) => ({ ...r, bm25n: 0 }));
+      // Lexical-only retrieval for fusion with RAG
+      const lexMap = new Map<string, number>();
+      try {
+        const lexTopK = Math.max(10, Math.min(50, topN * 5));
+        const lex = this.lexical.retrieve(note, lexTopK);
+        for (const { item, score } of lex) {
+          const code = (item as any).item || (item as any).code || "";
+          if (code)
+            lexMap.set(String(code), Math.max(0, Math.min(1, Number(score))));
+        }
+      } catch (e) {
+        this.logger.warn(`Lexical retrieval failed: ${String(e)}`);
       }
       // Preserve item facts so ranker and rules can use them
       const rowsForRanker = rows.map(
