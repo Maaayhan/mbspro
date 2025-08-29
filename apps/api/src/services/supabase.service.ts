@@ -123,11 +123,29 @@ export class SupabaseService {
     }
   }
 
-  async createClaim(claimData: any): Promise<any> {
+  async createClaim(claimData: {
+    patient_id: string;
+    practitioner_id: string;
+    encounter_id: string;
+    items: any[];
+    total_amount: number;
+    currency: string;
+    notes?: string;
+    status?: string;
+    fhir_data?: any;
+    submission_status?: 'pending' | 'success' | 'failed';
+    submission_error_reason?: string;
+  }): Promise<any> {
     try {
       const { data, error } = await supabaseClient
         .from("claims")
-        .insert([claimData])
+        .insert([{
+          ...claimData,
+          submission_status: claimData.submission_status || 'pending',
+          submission_error_reason: claimData.submission_error_reason || null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }])
         .select()
         .single();
 

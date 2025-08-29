@@ -101,9 +101,12 @@ export class ClaimService {
 
   /** Build and submit a single Claim (requires frontend to provide encounterId) */
   async buildAndSubmit(dto: BuildClaimDto) {
-    if (!dto.selected?.length) {
-      throw new BadRequestException("selected items must not be empty");
-    }
+    try {
+      // 验证输入数据
+      if (!dto.selected?.length) {
+        console.warn('❌ No selected items in claim');
+        throw new BadRequestException("selected items must not be empty");
+      }
 
     const currency = dto.currency ?? "AUD";
     const codes = dto.selected.map((s) => s.code);
@@ -133,38 +136,75 @@ export class ClaimService {
       notes: notes.length > 0 ? notes : undefined,
     });
 
-    // Store claim in Supabase
-    const claimData = {
-      patient_id: dto.patientId,
-      practitioner_id: dto.practitionerId,
-      encounter_id: dto.encounterId,
-      items: dto.selected,
-      total_amount: total,
-      currency: currency,
-      notes: dto.meta?.rawNote || "",
-      status: "submitted",
-      fhir_data: claim, // Store FHIR data for validation
-      created_at: new Date().toISOString(),
-    };
+      // Store claim in Supabase
+      const claimData = {
+        patient_id: dto.patientId,
+        practitioner_id: dto.practitionerId,
+        encounter_id: dto.encounterId,
+        items: dto.selected,
+        total_amount: total,
+        currency: currency,
+        notes: dto.meta?.rawNote || "",
+        status: "submitted",
+        fhir_data: claim, // Store FHIR data for validation
+        submission_status: "success" as const, // 默认为成功
+        submission_error_reason: null,
+        created_at: new Date().toISOString(),
+      };
 
     const created = await this.supa.createClaim(claimData);
 
-    // Optionally validate FHIR format with HAPI (but don't store there)
-    let hapiValidation = null;
-    try {
-      hapiValidation = await postResource(claim);
-    } catch (error) {
-      console.warn(
-        "HAPI validation failed, but claim saved to Supabase:",
-        error
-      );
-    }
+      try {
+        const created = await this.supa.createClaim(claimData);
+        console.log('✅ Claim Successfully Stored in Supabase:', JSON.stringify(created, null, 2));
 
-    return {
-      claim,
-      supabase: created,
-      hapi: hapiValidation,
-    };
+        return {
+          claim: created,
+          fhir: claim,
+        };
+      } catch (storageError) {
+        console.error('❌ Supabase Storage Error:', storageError);
+        throw storageError;
+      }
+    } catch (error) {
+      // 如果发生错误，记录错误并存储失败的 Claim
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('❌ Claim Submission Error:', errorMessage);
+      console.error('Full Error Object:', error);
+
+      const failedClaimData = {
+        patient_id: dto.patientId,
+        practitioner_id: dto.practitionerId,
+        encounter_id: dto.encounterId,
+        items: dto.selected,
+        total_amount: 0, // 可能无法计算总金额
+        currency: dto.currency ?? "AUD",
+        notes: dto.meta?.rawNote || "",
+        status: "failed",
+        submission_status: "failed" as const,
+        submission_error_reason: errorMessage,
+        created_at: new Date().toISOString(),
+      };
+
+      try {
+        const failedClaim = await this.supa.createClaim(failedClaimData);
+        console.log('⚠️ Failed Claim Stored in Supabase:', JSON.stringify(failedClaim, null, 2));
+
+        throw new BadRequestException({
+          message: "Claim submission failed",
+          error: errorMessage,
+          failedClaim,
+        });
+      } catch (storageError) {
+        console.error('❌ Failed to Store Failed Claim:', storageError);
+        
+        throw new BadRequestException({
+          message: "Claim submission failed",
+          error: errorMessage,
+          failedClaimData, // 使用原始的 failedClaimData
+        });
+      }
+    }
   }
 
   /** Automatically create Encounter + Claim transaction bundle  */
