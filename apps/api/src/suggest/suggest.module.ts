@@ -21,6 +21,8 @@ import { PatientsController } from './patients.controller';
     RankerService,
     ExplainService,
     RuleEngineService,
+    MetricsService,
+    LexicalRetrieverService,
   ],
 })
 export class SuggestModule {}
