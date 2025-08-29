@@ -65,6 +65,11 @@ export default function ClaimBuilderPage() {
     }
   })
 
+  // Add this useEffect to monitor draft.notes
+  useEffect(() => {
+    console.log('Current draft notes:', draft.notes);
+  }, [draft.notes]);
+
   // Check for expired draft on mount
   useEffect(() => {
     if (draft.meta?.updatedAt) {
@@ -285,8 +290,8 @@ export default function ClaimBuilderPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Clinical Notes Summary */}
-            {draft.notes && (
+            {/* Clinical Notes Summary - Always show if there are selected items */}
+            {(draft.notes || draft.selected.length > 0) && (
               <div className="card">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-gray-900">Your Clinical Notes</h2>
@@ -298,7 +303,11 @@ export default function ClaimBuilderPage() {
                   </Link>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-4 max-h-32 overflow-y-auto">
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{draft.notes}</p>
+                  {draft.notes ? (
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{draft.notes}</p>
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">No clinical notes entered yet</p>
+                  )}
                 </div>
               </div>
             )}

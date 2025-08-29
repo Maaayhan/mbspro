@@ -433,6 +433,15 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
                   ) : (
                     <Link
                       href="/claim-builder"
+                      onClick={() => {
+                        // make sure notes are updated
+                        if (soapNotes && soapNotes !== draft.notes) {
+                          setNotes(soapNotes)
+                        }
+                        // save suggestions to persistent storage
+                        setCandidates(suggestions)
+                        setNote(soapNotes)
+                      }}
                       className="btn-primary w-full mt-4 flex justify-center"
                     >
                       Proceed to Claim
