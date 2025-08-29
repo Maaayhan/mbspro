@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, Post, Get, Query } from "@nestjs/common";
+import { Body, Controller, HttpCode, Post, Get, Query, Param } from "@nestjs/common";
 import { ClaimService } from "./claim.service";
 import { BuildClaimDto } from "./dto/build-claim.dto";
 import { SubmitBundleDto } from "./dto/submit-bundle.dto";
@@ -50,7 +50,7 @@ export class ClaimController {
 
   @Get("patient/:patientId")
   @HttpCode(200)
-  async getPatientClaims(@Query("patientId") patientId: string) {
+  async getPatientClaims(@Param("patientId") patientId: string) {
     return this.svc.getPatientClaims(patientId);
   }
 }

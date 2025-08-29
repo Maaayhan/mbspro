@@ -24,6 +24,7 @@ logger.log("📊 Using Supabase client for all database operations");
     RulesModule,
     MbsModule,
     DocGeneratorModule,
+    ClaimModule,
   ],
   controllers: [AppController],
   providers: [AppService],
