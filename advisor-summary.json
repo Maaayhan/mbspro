@@ -1,0 +1,70 @@
+{
+  "timestamp": "2025-08-29T18:29:18.364Z",
+  "overall_score": 0.7207277526395173,
+  "grade": "C",
+  "key_metrics": [
+    {
+      "category": "Unit Tests",
+      "metric": "Pass Rate",
+      "value": "23/26",
+      "percentage": "88.5%"
+    },
+    {
+      "category": "Precision",
+      "metric": "Top-3 Precision",
+      "value": "37.3%",
+      "percentage": "37.3%"
+    },
+    {
+      "category": "Rule Accuracy",
+      "metric": "Overall Accuracy",
+      "value": "100.0%",
+      "percentage": "100.0%"
+    },
+    {
+      "category": "Performance",
+      "metric": "Median Latency",
+      "value": "1652.5877478473735ms",
+      "percentage": "✅ Good"
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "area": "Unit Tests",
+      "issue": "3 guardrail tests failed",
+      "action": "Fix failing unit tests before proceeding with integration"
+    },
+    {
+      "priority": "HIGH",
+      "area": "precision",
+      "issue": "precision score below acceptable threshold",
+      "action": "Improve precision implementation and tuning"
+    },
+    {
+      "priority": "MEDIUM",
+      "area": "recall",
+      "issue": "recall score below acceptable threshold",
+      "action": "Improve recall implementation and tuning"
+    },
+    {
+      "priority": "MEDIUM",
+      "area": "calibration",
+      "issue": "calibration score below acceptable threshold",
+      "action": "Improve calibration implementation and tuning"
+    }
+  ],
+  "advisor_summary": {
+    "executive_summary": "MBS coding system evaluation completed with overall grade C (72.1%). System shows 0/2 components passing acceptance criteria.",
+    "testing_approach": "Comprehensive evaluation using synthetic datasets, unit tests, and precision/recall metrics. No gold standard data required - evaluation based on rule consistency and expected behaviors.",
+    "key_strengths": [
+      "Good response time performance"
+    ],
+    "key_concerns": [
+      "3 unit tests failing",
+      "Low precision in code recommendations"
+    ],
+    "readiness_assessment": "NEEDS_IMPROVEMENT",
+    "confidence_in_results": "HIGH - evaluation covers rule accuracy, performance, and calibration using synthetic data designed to test system boundaries"
+  }
+}

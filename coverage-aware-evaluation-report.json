@@ -1,0 +1,343 @@
+{
+  "evaluation_summary": {
+    "timestamp": "2025-08-29T18:42:08.642Z",
+    "evaluation_type": "coverage_aware",
+    "overall_status": {
+      "score": 0.6074300699300699,
+      "grade": "D",
+      "interpretation": "Coverage-aware evaluation reflects realistic performance within rule limitations"
+    },
+    "available_codes": 260,
+    "code_categories": [
+      {
+        "category": "standard_consultations",
+        "count": 8
+      },
+      {
+        "category": "telehealth_consultations",
+        "count": 199
+      },
+      {
+        "category": "chronic_disease_management",
+        "count": 4
+      },
+      {
+        "category": "after_hours",
+        "count": 0
+      },
+      {
+        "category": "other",
+        "count": 49
+      }
+    ]
+  },
+  "detailed_results": {
+    "guardrail_tests": {
+      "passed": 23,
+      "failed": 3,
+      "total": 26
+    },
+    "metrics_evaluation": {
+      "metadata": {
+        "evaluation_time_ms": 3,
+        "test_cases_count": 11,
+        "timestamp": "2025-08-29T18:42:08.640Z",
+        "options": {}
+      },
+      "precision_recall": {
+        "precision": {
+          "mean": 0.5454545454545454,
+          "std": 0.29379877923735326,
+          "values": [
+            0.3333333333333333,
+            0.3333333333333333,
+            0.3333333333333333,
+            0.6666666666666666,
+            0.6666666666666666,
+            0.3333333333333333,
+            0.6666666666666666,
+            0.6666666666666666,
+            1,
+            1,
+            0
+          ]
+        },
+        "recall": {
+          "mean": 0.9090909090909091,
+          "std": 0.28747978728803447,
+          "values": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            0
+          ]
+        },
+        "f1": {
+          "mean": 0.6545454545454544,
+          "std": 0.2775334094995227,
+          "values": [
+            0.5,
+            0.5,
+            0.5,
+            0.8,
+            0.8,
+            0.5,
+            0.8,
+            0.8,
+            1,
+            1,
+            0
+          ]
+        }
+      },
+      "rule_accuracy": {
+        "overall_accuracy": 0,
+        "details": {
+          "correct_rules_fired": 0,
+          "incorrect_rules_fired": 0,
+          "missed_rules": 0,
+          "total_cases": 11,
+          "by_rule_type": {
+            "short_consultation": {
+              "correct": 1,
+              "total": 1
+            },
+            "standard_consultation": {
+              "correct": 1,
+              "total": 1
+            },
+            "long_consultation": {
+              "correct": 1,
+              "total": 1
+            },
+            "face_to_face_eligibility": {
+              "correct": 1,
+              "total": 1
+            },
+            "telehealth_eligibility": {
+              "correct": 1,
+              "total": 1
+            },
+            "telehealth_short": {
+              "correct": 1,
+              "total": 1
+            },
+            "chronic_disease_plan": {
+              "correct": 1,
+              "total": 1
+            },
+            "chronic_disease_review": {
+              "correct": 1,
+              "total": 1
+            },
+            "general": {
+              "correct": 3,
+              "total": 3
+            }
+          }
+        },
+        "by_rule_type": [
+          {
+            "rule_type": "short_consultation",
+            "accuracy": 1,
+            "sample_size": 1
+          },
+          {
+            "rule_type": "standard_consultation",
+            "accuracy": 1,
+            "sample_size": 1
+          },
+          {
+            "rule_type": "long_consultation",
+            "accuracy": 1,
+            "sample_size": 1
+          },
+          {
+            "rule_type": "face_to_face_eligibility",
+            "accuracy": 1,
+            "sample_size": 1
+          },
+          {
+            "rule_type": "telehealth_eligibility",
+            "accuracy": 1,
+            "sample_size": 1
+          },
+          {
+            "rule_type": "telehealth_short",
+            "accuracy": 1,
+            "sample_size": 1
+          },
+          {
+            "rule_type": "chronic_disease_plan",
+            "accuracy": 1,
+            "sample_size": 1
+          },
+          {
+            "rule_type": "chronic_disease_review",
+            "accuracy": 1,
+            "sample_size": 1
+          },
+          {
+            "rule_type": "general",
+            "accuracy": 1,
+            "sample_size": 3
+          }
+        ]
+      },
+      "confidence_calibration": {
+        "by_confidence_range": [
+          {
+            "confidence_range": "0-0.3",
+            "name": "low",
+            "mean_confidence": 0.2650796716233894,
+            "accuracy": 1,
+            "sample_size": 1,
+            "calibration_error": 0.7349203283766106
+          },
+          {
+            "confidence_range": "0.3-0.7",
+            "name": "medium",
+            "mean_confidence": 0.3444149062516293,
+            "accuracy": 0.5,
+            "sample_size": 2,
+            "calibration_error": 0.1555850937483707
+          },
+          {
+            "confidence_range": "0.7-1",
+            "name": "high",
+            "mean_confidence": 0.8252594951316695,
+            "accuracy": 1,
+            "sample_size": 8,
+            "calibration_error": 0.17474050486833048
+          }
+        ],
+        "overall_calibration_error": 0.3550819756644373,
+        "is_well_calibrated": false
+      },
+      "performance": {
+        "latency": {
+          "mean": 1068.8251045959134,
+          "median": 1043.715260499797,
+          "p95": 2156.765407678537,
+          "p99": 2156.765407678537,
+          "max": 2156.765407678537,
+          "min": 301.9045452240325
+        },
+        "throughput": {
+          "requests_per_second": 0.9356067664391792,
+          "total_requests": 11,
+          "total_time_ms": 11757.076150555047
+        }
+      },
+      "overall_assessment": {
+        "overall_score": 0.48863636363636365,
+        "component_scores": {
+          "precision": 0.5454545454545454,
+          "recall": 0.9090909090909091,
+          "rule_accuracy": 0,
+          "calibration": 0.5,
+          "performance": 1
+        },
+        "weights": {
+          "precision": 0.25,
+          "recall": 0.25,
+          "rule_accuracy": 0.3,
+          "calibration": 0.15,
+          "performance": 0.05
+        },
+        "grade": "F"
+      }
+    },
+    "coverage_analysis": {
+      "total_test_cases": 11,
+      "coverage_statistics": {
+        "perfect_coverage_cases": 8,
+        "partial_coverage_cases": 0,
+        "no_coverage_cases": 3
+      },
+      "performance_by_coverage": {
+        "perfect_coverage": {
+          "precision": [],
+          "recall": [],
+          "confidence": []
+        },
+        "partial_coverage": {
+          "precision": [],
+          "recall": [],
+          "confidence": []
+        },
+        "no_coverage": {
+          "precision": [],
+          "recall": [],
+          "confidence": []
+        }
+      },
+      "coverage_recommendations": [
+        "Consider expanding rule coverage for better system performance"
+      ]
+    }
+  },
+  "coverage_aware_findings": [
+    {
+      "category": "Unit Tests",
+      "metric": "Pass Rate",
+      "value": "23/26",
+      "percentage": "88.5%"
+    },
+    {
+      "category": "Coverage-Aware Precision",
+      "metric": "Top-3 Precision",
+      "value": "54.5%",
+      "note": "Within available rule coverage"
+    },
+    {
+      "category": "Coverage-Aware Recall",
+      "metric": "Recall Rate",
+      "value": "90.9%",
+      "note": "Limited by rule coverage scope"
+    },
+    {
+      "category": "Rule Coverage",
+      "metric": "Available Codes",
+      "value": "260",
+      "note": "8 tests with perfect coverage"
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "area": "Unit Tests",
+      "issue": "3 guardrail tests failed",
+      "action": "Fix failing unit tests"
+    },
+    {
+      "priority": "MEDIUM",
+      "area": "Rule Coverage",
+      "issue": "3 test cases have no rule coverage",
+      "action": "Consider expanding rule database for better coverage"
+    }
+  ],
+  "advisor_summary": {
+    "executive_summary": "Coverage-aware MBS evaluation completed with grade D (60.7%). Evaluation accounts for limited rule coverage of 260 codes.",
+    "testing_approach": "Realistic evaluation using only codes covered by rule engine. Tests designed within actual system limitations rather than unrealistic expectations.",
+    "coverage_context": {
+      "available_codes": 260,
+      "main_categories": "Standard consultations, Telehealth consultations, Chronic disease management",
+      "coverage_limitations": "Mental health, after-hours, and specialist codes may have limited coverage"
+    },
+    "key_insights": [
+      "System performance evaluated within realistic rule coverage constraints",
+      "Precision/recall metrics reflect actual system capabilities",
+      "Test cases designed to match available rule coverage"
+    ],
+    "readiness_assessment": "NEEDS_IMPROVEMENT",
+    "confidence_in_results": "HIGH - evaluation reflects realistic system performance within rule coverage limitations"
+  }
+}

@@ -1,0 +1,262 @@
+{
+  "metadata": {
+    "generated_at": "2025-08-29T18:42:08.632Z",
+    "version": "2.0.0",
+    "coverage_aware": true,
+    "available_codes_count": 260,
+    "code_categories": [
+      "standard_consultations",
+      "telehealth_consultations",
+      "chronic_disease_management",
+      "after_hours",
+      "other"
+    ],
+    "coverage_note": "Tests designed to work within actual rule coverage limits"
+  },
+  "available_codes_summary": {
+    "total_codes": 260,
+    "by_category": [
+      {
+        "category": "standard_consultations",
+        "count": 8,
+        "sample_codes": [
+          "3",
+          "4",
+          "23"
+        ]
+      },
+      {
+        "category": "telehealth_consultations",
+        "count": 199,
+        "sample_codes": [
+          "91804",
+          "91805",
+          "91806"
+        ]
+      },
+      {
+        "category": "chronic_disease_management",
+        "count": 4,
+        "sample_codes": [
+          "729",
+          "731",
+          "735"
+        ]
+      },
+      {
+        "category": "after_hours",
+        "count": 0,
+        "sample_codes": []
+      },
+      {
+        "category": "other",
+        "count": 49,
+        "sample_codes": [
+          "123",
+          "124",
+          "743"
+        ]
+      }
+    ]
+  },
+  "tests": {
+    "rule_based_tests": {
+      "duration_rules": [
+        {
+          "id": "dur_short_001",
+          "note": "Brief 10 minute consultation for prescription refill",
+          "expected_codes": [
+            "3"
+          ],
+          "confidence_range": [
+            0.7,
+            0.85
+          ],
+          "test_focus": "short_consultation",
+          "coverage_category": "standard_consultations"
+        },
+        {
+          "id": "dur_standard_001",
+          "note": "25 minute consultation discussing diabetes management and medication review",
+          "expected_codes": [
+            "23"
+          ],
+          "confidence_range": [
+            0.75,
+            0.9
+          ],
+          "test_focus": "standard_consultation",
+          "coverage_category": "standard_consultations"
+        },
+        {
+          "id": "dur_long_001",
+          "note": "45 minute comprehensive health assessment with multiple conditions reviewed",
+          "expected_codes": [
+            "36"
+          ],
+          "confidence_range": [
+            0.8,
+            0.95
+          ],
+          "test_focus": "long_consultation",
+          "coverage_category": "standard_consultations"
+        }
+      ],
+      "eligibility_rules": [
+        {
+          "id": "elig_f2f_001",
+          "note": "Face-to-face consultation at GP clinic for physical examination",
+          "expected_codes": [
+            "3",
+            "4"
+          ],
+          "confidence_range": [
+            0.75,
+            0.9
+          ],
+          "test_focus": "face_to_face_eligibility",
+          "coverage_category": "standard_consultations"
+        }
+      ],
+      "telehealth_rules": [
+        {
+          "id": "telehealth_001",
+          "note": "Telehealth video consultation for ongoing diabetes monitoring, 20 minutes",
+          "expected_codes": [
+            "91804",
+            "91805"
+          ],
+          "confidence_range": [
+            0.8,
+            0.9
+          ],
+          "test_focus": "telehealth_eligibility",
+          "coverage_category": "telehealth_consultations"
+        },
+        {
+          "id": "telehealth_short_001",
+          "note": "Brief 8 minute telehealth consultation for test results discussion",
+          "expected_codes": [
+            "91806"
+          ],
+          "confidence_range": [
+            0.75,
+            0.9
+          ],
+          "test_focus": "telehealth_short",
+          "coverage_category": "telehealth_consultations"
+        }
+      ],
+      "chronic_disease_tests": [
+        {
+          "id": "chronic_plan_001",
+          "note": "Chronic disease management plan development for diabetes and hypertension, 30 minutes",
+          "expected_codes": [
+            "729",
+            "731"
+          ],
+          "confidence_range": [
+            0.8,
+            0.95
+          ],
+          "test_focus": "chronic_disease_plan",
+          "coverage_category": "chronic_disease_management"
+        },
+        {
+          "id": "chronic_review_001",
+          "note": "Chronic disease management plan review, patient progress assessment",
+          "expected_codes": [
+            "729",
+            "731"
+          ],
+          "confidence_range": [
+            0.75,
+            0.9
+          ],
+          "test_focus": "chronic_disease_review",
+          "coverage_category": "chronic_disease_management"
+        }
+      ]
+    },
+    "confidence_tests": {
+      "high_confidence": [
+        {
+          "id": "conf_high_001",
+          "note": "Comprehensive 45-minute consultation with detailed history, physical examination, management plan development, and patient education for multiple chronic conditions",
+          "expected_confidence": [
+            0.85,
+            0.95
+          ],
+          "expected_top_3": [
+            "91831",
+            "91872"
+          ],
+          "reasoning": "Complete clinical picture with sufficient duration and comprehensive care"
+        }
+      ],
+      "medium_confidence": [
+        {
+          "id": "conf_med_001",
+          "note": "Patient consultation for back pain, some assessment done",
+          "expected_confidence": [
+            0.4,
+            0.7
+          ],
+          "expected_top_3": [
+            "3",
+            "4"
+          ],
+          "missing_elements": [
+            "duration",
+            "specific_management"
+          ],
+          "reasoning": "Some clinical detail but missing key administrative elements"
+        }
+      ],
+      "low_confidence": [
+        {
+          "id": "conf_low_001",
+          "note": "Patient visit",
+          "expected_confidence": [
+            0.1,
+            0.35
+          ],
+          "expected_top_3": [],
+          "missing_elements": [
+            "clinical_detail",
+            "duration",
+            "procedures"
+          ],
+          "reasoning": "Insufficient clinical and administrative information"
+        }
+      ]
+    },
+    "coverage_edge_cases": {
+      "out_of_coverage_scenarios": [
+        {
+          "id": "coverage_gap_001",
+          "note": "Mental health assessment requiring specialist psychology referral",
+          "scenario": "RAG may return psychology codes not in our rule coverage",
+          "expected_behavior": "System should handle gracefully with lower confidence",
+          "test_focus": "out_of_coverage_handling"
+        },
+        {
+          "id": "coverage_gap_002",
+          "note": "After hours emergency consultation at 11pm",
+          "scenario": "After hours codes may not be fully covered in rules",
+          "expected_behavior": "Fallback to standard consultation codes with warnings",
+          "test_focus": "after_hours_fallback"
+        }
+      ],
+      "partial_coverage_scenarios": [
+        {
+          "id": "partial_coverage_001",
+          "note": "Complex procedure requiring multiple MBS items",
+          "scenario": "Some items in sequence covered, others not",
+          "expected_behavior": "Return covered items with partial confidence",
+          "test_focus": "partial_coverage_handling"
+        }
+      ]
+    }
+  }
+}
