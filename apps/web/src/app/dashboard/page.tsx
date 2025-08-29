@@ -102,6 +102,11 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedKPI, setSelectedKPI] = useState<string | null>(null);
 
+  // Loading component for cards
+  const LoadingSpinner = ({ className = "h-8 w-8" }: { className?: string }) => (
+    <div className={`animate-spin rounded-full border-2 border-gray-300 border-t-primary-600 ${className}`}></div>
+  );
+
   const getTopItems = (
     items: TopItem[],
     sortBy: "count" | "revenue",
@@ -592,33 +597,41 @@ export default function DashboardPage() {
                   : undefined
               }
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">
-                    {kpi.title}
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">
-                    {kpi.value}
-                  </p>
+              {isLoading ? (
+                <div className="flex items-center justify-center h-24">
+                  <LoadingSpinner className="h-6 w-6" />
                 </div>
-                <div
-                  className={`flex items-center space-x-1 ${
-                    kpi.trend === "up" ? "text-green-600" : "text-red-600"
-                  }`}
-                >
-                  {kpi.trend === "up" ? (
-                    <ArrowUpIcon className="h-4 w-4" />
-                  ) : (
-                    <ArrowDownIcon className="h-4 w-4" />
+              ) : (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">
+                        {kpi.title}
+                      </p>
+                      <p className="text-3xl font-bold text-gray-900 mt-2">
+                        {kpi.value}
+                      </p>
+                    </div>
+                    <div
+                      className={`flex items-center space-x-1 ${
+                        kpi.trend === "up" ? "text-green-600" : "text-red-600"
+                      }`}
+                    >
+                      {kpi.trend === "up" ? (
+                        <ArrowUpIcon className="h-4 w-4" />
+                      ) : (
+                        <ArrowDownIcon className="h-4 w-4" />
+                      )}
+                      <span className="text-sm font-medium">{kpi.change}</span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-1">{kpi.description}</p>
+                  {kpi.key === "complianceScore" && (
+                    <p className="text-xs text-primary-600 mt-2">
+                      Click for compliance details →
+                    </p>
                   )}
-                  <span className="text-sm font-medium">{kpi.change}</span>
-                </div>
-              </div>
-              <p className="text-sm text-gray-500 mt-1">{kpi.description}</p>
-              {kpi.key === "complianceScore" && (
-                <p className="text-xs text-primary-600 mt-2">
-                  Click for compliance details →
-                </p>
+                </>
               )}
             </div>
           ))}
@@ -637,7 +650,12 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="h-96">
-              <ResponsiveContainer width="100%" height="100%">
+              {isLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <LoadingSpinner className="h-8 w-8" />
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
                 <LineChart
                   data={dashboardData.revenueTrend.map((item) => ({
                     month: item.month,
@@ -679,7 +697,8 @@ export default function DashboardPage() {
                     dot={{ fill: "#0ea5e9", strokeWidth: 2, r: 6 }}
                   />
                 </LineChart>
-              </ResponsiveContainer>
+                </ResponsiveContainer>
+              )}
             </div>
           </div>
 
@@ -715,7 +734,11 @@ export default function DashboardPage() {
             </div>
 
             <div className="h-96">
-              {dashboardData.topItems && dashboardData.topItems.length > 0 ? (
+              {isLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <LoadingSpinner className="h-8 w-8" />
+                </div>
+              ) : dashboardData.topItems && dashboardData.topItems.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={getTopItems(
@@ -814,7 +837,12 @@ export default function DashboardPage() {
               Error Reasons
             </h3>
             <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
+              {isLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <LoadingSpinner className="h-6 w-6" />
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={errorReasonsData}
@@ -837,7 +865,8 @@ export default function DashboardPage() {
                     }}
                   />
                 </PieChart>
-              </ResponsiveContainer>
+                </ResponsiveContainer>
+              )}
             </div>
             <div className="mt-4 space-y-2">
               {errorReasonsData.map((item, index) => (
@@ -861,7 +890,12 @@ export default function DashboardPage() {
               Recent Activity
             </h3>
             <div className="space-y-4">
-              {recentActivity.map((activity) => (
+              {isLoading ? (
+                <div className="flex items-center justify-center h-32">
+                  <LoadingSpinner className="h-6 w-6" />
+                </div>
+              ) : (
+                recentActivity.map((activity) => (
                 <div
                   key={activity.id}
                   className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg"
@@ -876,7 +910,8 @@ export default function DashboardPage() {
                     </p>
                   </div>
                 </div>
-              ))}
+                ))
+              )}
             </div>
 
             <div className="mt-4 pt-4 border-t border-gray-200">
@@ -1000,7 +1035,11 @@ export default function DashboardPage() {
           </div>
 
           <div className="overflow-x-auto">
-            {dashboardData.auditRows.length === 0 ? (
+            {isLoading ? (
+              <div className="flex items-center justify-center h-32">
+                <LoadingSpinner className="h-6 w-6" />
+              </div>
+            ) : dashboardData.auditRows.length === 0 ? (
               <div className="text-center py-8 bg-gray-50 rounded-lg">
                 <div className="flex flex-col items-center justify-center space-y-4">
                   <DocumentTextIcon className="h-12 w-12 text-gray-400" />
