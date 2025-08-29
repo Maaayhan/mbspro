@@ -2,11 +2,7 @@
 set -e
 
 echo "Installing dependencies..."
-npm install
-
-echo "Installing shared package..."
-cd ../../packages/shared && npm install && npm run build
-cd ../../apps/web
+npm install --production=false --ignore-scripts
 
 echo "Building web app..."
 npm run build
