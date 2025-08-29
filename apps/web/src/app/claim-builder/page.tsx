@@ -5,9 +5,11 @@ import Link from "next/link";
 import AppLayout from "@/components/AppLayout";
 import DocumentViewer from "@/components/DocumentViewer";
 import Notification from "@/components/Notification";
+import PatientSelector from "@/components/PatientSelector";
 import { useClaimDraft } from "@/store/useClaimDraft";
 import { usePatients, usePractitioners } from "@/hooks/useSupabaseData";
 import { useDocumentGeneration } from "@/hooks/useDocumentGeneration";
+import { usePatientSelection } from "@/store/usePatientSelection";
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
@@ -47,6 +49,9 @@ export default function ClaimBuilderPage() {
   const { draft, clear } = useClaimDraft();
   const [selectedPatient, setSelectedPatient] = useState("");
   const [selectedProvider, setSelectedProvider] = useState("");
+  
+  // Get shared patient selection from suggestions page
+  const { selectedPatient: sharedPatient } = usePatientSelection();
 
   // Document generation state
   const [generatedDoc, setGeneratedDoc] = useState<GenerateDocResponse | null>(
@@ -537,6 +542,33 @@ export default function ClaimBuilderPage() {
                   <p className="text-sm text-gray-700 whitespace-pre-wrap">
                     {draft.notes}
                   </p>
+                </div>
+              </div>
+            )}
+
+            {/* Shared Patient Selection */}
+            {sharedPatient && (
+              <div className="card">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    Selected Patient Context
+                  </h2>
+                  <span className="text-sm text-green-600 bg-green-50 px-2 py-1 rounded">
+                    From Suggestions
+                  </span>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <div className="font-medium text-blue-900">{sharedPatient.name}</div>
+                      <div className="text-blue-700">{sharedPatient.age}yo • {sharedPatient.provider_type}</div>
+                      <div className="text-blue-600">{sharedPatient.location} • {sharedPatient.hours_bucket}</div>
+                    </div>
+                    <div>
+                      <div className="text-blue-700">Referral: {sharedPatient.referral_present ? 'Yes' : 'No'}</div>
+                      <div className="text-blue-600">Claims: {sharedPatient.last_claimed_items.length}</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

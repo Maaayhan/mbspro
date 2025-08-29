@@ -3,9 +3,11 @@
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import AppLayout from "@/components/AppLayout";
+import PatientSelector from "@/components/PatientSelector";
 import { useClaimDraft } from "@/store/useClaimDraft";
 import { runQuickRules } from "@/lib/quickRules";
 import { useSuggestResults } from "@/store/useSuggestResults";
+import { usePatientSelection } from "@/store/usePatientSelection";
 import {
   MicrophoneIcon,
   SparklesIcon,
@@ -17,6 +19,20 @@ import {
 } from "@heroicons/react/24/outline";
 
 // Types
+interface Patient {
+  id: string;
+  name: string;
+  age: number;
+  provider_type: 'GP' | 'Registrar' | 'NP' | 'Specialist';
+  location: 'clinic' | 'home' | 'nursing_home' | 'hospital';
+  consult_start: string;
+  consult_end: string;
+  hours_bucket: 'business' | 'after_hours' | 'public_holiday';
+  referral_present: boolean;
+  selected_codes: string[];
+  last_claimed_items: Array<{ code: string; at: string }>;
+}
+
 interface SuggestCandidate {
   code: string;
   title: string;
@@ -57,6 +73,9 @@ export default function SuggestionsPage() {
   const [selectionBlocked, setSelectionBlocked] = useState(false);
   const [selectionWarnings, setSelectionWarnings] = useState<string[]>([]);
   const [hasClearedNotes, setHasClearedNotes] = useState(false);
+  
+  // Use shared patient selection store
+  const { selectedPatient, setSelectedPatient } = usePatientSelection();
 
   // Voice input states
   const [isListening, setIsListening] = useState(false);
@@ -186,13 +205,29 @@ export default function SuggestionsPage() {
       const apiBase = (
         process.env.NEXT_PUBLIC_API_BASE || "http://localhost:4000"
       ).replace(/\/$/, "");
+      
+      const requestBody: any = {
+        selectedCodes: codes,
+        note: draft.notes || soapNotes,
+      };
+
+      // Add patient context if available (optional)
+      if (selectedPatient) {
+        requestBody.context = {
+          last_claimed_items: selectedPatient.last_claimed_items,
+          provider_type: selectedPatient.provider_type,
+          location: selectedPatient.location,
+          referral_present: selectedPatient.referral_present,
+          consult_start: selectedPatient.consult_start,
+          consult_end: selectedPatient.consult_end,
+          hours_bucket: selectedPatient.hours_bucket,
+        };
+      }
+
       const res = await fetch(`${apiBase}/api/rules/validate-selection`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          selectedCodes: codes,
-          note: draft.notes || soapNotes,
-        }),
+        body: JSON.stringify(requestBody),
       });
       if (!res.ok) return;
       const data = await res.json();
@@ -242,7 +277,7 @@ export default function SuggestionsPage() {
       setSelectionBlocked(false);
       setSelectionWarnings([]);
     }
-  }, [draft.selected]);
+  }, [draft.selected, selectedPatient]);
 
   // Quick compliance status for UI
   const quickStatus = useMemo(() => {
@@ -269,15 +304,28 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
       const apiBase = (
         process.env.NEXT_PUBLIC_API_BASE || "http://localhost:4000"
       ).replace(/\/$/, "");
+      const requestBody: any = {
+        note: soapNotes.trim(),
+        topN: 5,
+      };
+
+      // Add patient context if available (optional)
+      if (selectedPatient) {
+        requestBody.lastClaimedItems = selectedPatient.last_claimed_items;
+        requestBody.providerType = selectedPatient.provider_type;
+        requestBody.location = selectedPatient.location;
+        requestBody.referralPresent = selectedPatient.referral_present;
+        requestBody.consultStart = selectedPatient.consult_start;
+        requestBody.consultEnd = selectedPatient.consult_end;
+        requestBody.hoursBucket = selectedPatient.hours_bucket;
+      }
+
       const response = await fetch(`${apiBase}/api/suggest`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          note: soapNotes.trim(),
-          topN: 5,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -312,6 +360,9 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Main Content - Input and Suggestions */}
           <div className="lg:col-span-3 space-y-6">
+            {/* Patient Selection */}
+            <PatientSelector />
+
             {/* Input Section */}
             <div className="card">
               <div className="flex items-center justify-between mb-4">

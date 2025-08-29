@@ -1,0 +1,271 @@
+{
+  "patients": [
+    {
+      "id": "patient_001",
+      "name": "John Smith",
+      "age": 45,
+      "provider_type": "GP",
+      "location": "clinic",
+      "consult_start": "2024-01-15T09:00:00Z",
+      "consult_end": "2024-01-15T09:30:00Z",
+      "hours_bucket": "business",
+      "referral_present": false,
+      "selected_codes": ["23"],
+      "last_claimed_items": [
+        {
+          "code": "23",
+          "at": "2024-01-10T14:30:00Z"
+        },
+        {
+          "code": "721",
+          "at": "2024-01-05T10:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "patient_002",
+      "name": "Sarah Johnson",
+      "age": 32,
+      "provider_type": "Specialist",
+      "location": "hospital",
+      "consult_start": "2024-01-15T18:00:00Z",
+      "consult_end": "2024-01-15T18:45:00Z",
+      "hours_bucket": "after_hours",
+      "referral_present": true,
+      "selected_codes": ["92479"],
+      "last_claimed_items": [
+        {
+          "code": "92479",
+          "at": "2024-01-01T15:00:00Z"
+        },
+        {
+          "code": "92121",
+          "at": "2024-01-01T15:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "patient_003",
+      "name": "Michael Chen",
+      "age": 67,
+      "provider_type": "NP",
+      "location": "nursing_home",
+      "consult_start": "2024-01-15T11:00:00Z",
+      "consult_end": "2024-01-15T11:20:00Z",
+      "hours_bucket": "business",
+      "referral_present": false,
+      "selected_codes": ["721"],
+      "last_claimed_items": [
+        {
+          "code": "721",
+          "at": "2024-01-01T10:00:00Z"
+        },
+        {
+          "code": "721",
+          "at": "2024-01-08T14:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "patient_004",
+      "name": "Emma Wilson",
+      "age": 28,
+      "provider_type": "GP",
+      "location": "home",
+      "consult_start": "2024-01-15T20:00:00Z",
+      "consult_end": "2024-01-15T20:25:00Z",
+      "hours_bucket": "after_hours",
+      "referral_present": false,
+      "selected_codes": ["92121"],
+      "last_claimed_items": [
+        {
+          "code": "23",
+          "at": "2024-01-10T16:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "patient_005",
+      "name": "David Brown",
+      "age": 55,
+      "provider_type": "Registrar",
+      "location": "clinic",
+      "consult_start": "2024-01-15T13:00:00Z",
+      "consult_end": "2024-01-15T13:40:00Z",
+      "hours_bucket": "business",
+      "referral_present": true,
+      "selected_codes": ["92479", "721"],
+      "last_claimed_items": [
+        {
+          "code": "92479",
+          "at": "2024-01-01T09:00:00Z"
+        },
+        {
+          "code": "721",
+          "at": "2024-01-08T11:00:00Z"
+        },
+        {
+          "code": "23",
+          "at": "2024-01-12T15:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "patient_006",
+      "name": "Lisa Davis",
+      "age": 41,
+      "provider_type": "Specialist",
+      "location": "clinic",
+      "consult_start": "2024-01-15T10:00:00Z",
+      "consult_end": "2024-01-15T10:15:00Z",
+      "hours_bucket": "business",
+      "referral_present": true,
+      "selected_codes": [],
+      "last_claimed_items": [
+        {
+          "code": "91827",
+          "at": "2024-01-01T14:00:00Z"
+        },
+        {
+          "code": "91827",
+          "at": "2024-01-08T16:00:00Z"
+        },
+        {
+          "code": "91827",
+          "at": "2024-01-12T09:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "patient_007",
+      "name": "Robert Taylor",
+      "age": 73,
+      "provider_type": "Specialist",
+      "location": "hospital",
+      "consult_start": "2024-01-15T16:00:00Z",
+      "consult_end": "2024-01-15T16:50:00Z",
+      "hours_bucket": "business",
+      "referral_present": true,
+      "selected_codes": ["92479"],
+      "last_claimed_items": [
+        {
+          "code": "92479",
+          "at": "2024-01-01T10:00:00Z"
+        },
+        {
+          "code": "92479",
+          "at": "2024-01-08T14:00:00Z"
+        },
+        {
+          "code": "92479",
+          "at": "2024-01-12T11:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "patient_008",
+      "name": "Maria Garcia",
+      "age": 29,
+      "provider_type": "GP",
+      "location": "clinic",
+      "consult_start": "2024-01-15T19:00:00Z",
+      "consult_end": "2024-01-15T19:30:00Z",
+      "hours_bucket": "after_hours",
+      "referral_present": false,
+      "selected_codes": ["92121"],
+      "last_claimed_items": []
+    },
+    {
+      "id": "patient_009",
+      "name": "James Miller",
+      "age": 38,
+      "provider_type": "NP",
+      "location": "home",
+      "consult_start": "2024-01-15T12:00:00Z",
+      "consult_end": "2024-01-15T12:25:00Z",
+      "hours_bucket": "business",
+      "referral_present": false,
+      "selected_codes": ["721"],
+      "last_claimed_items": [
+        {
+          "code": "721",
+          "at": "2024-01-01T13:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "patient_010",
+      "name": "Jennifer Lee",
+      "age": 52,
+      "provider_type": "Registrar",
+      "location": "clinic",
+      "consult_start": "2024-01-15T08:00:00Z",
+      "consult_end": "2024-01-15T08:35:00Z",
+      "hours_bucket": "business",
+      "referral_present": true,
+      "selected_codes": ["23", "721"],
+      "last_claimed_items": [
+        {
+          "code": "23",
+          "at": "2024-01-01T15:00:00Z"
+        },
+        {
+          "code": "721",
+          "at": "2024-01-08T10:00:00Z"
+        }
+      ]
+    }
+  ],
+  "test_scenarios": {
+    "frequency_limit_test": {
+      "description": "Patient with multiple claims of the same item to test frequency limits",
+      "patient_id": "patient_006",
+      "expected_behavior": "Should trigger frequency limit warnings for item 91827 (psychiatrist video attendance)"
+    },
+    "after_hours_test": {
+      "description": "Patient with after-hours consultation to test after-hours rules",
+      "patient_ids": ["patient_002", "patient_004", "patient_008"],
+      "expected_behavior": "Should pass after-hours validation for appropriate items"
+    },
+    "referral_required_test": {
+      "description": "Patients with and without referrals to test referral requirements",
+      "with_referral": ["patient_002", "patient_005", "patient_007", "patient_010"],
+      "without_referral": ["patient_001", "patient_003", "patient_004", "patient_006", "patient_008", "patient_009"],
+      "expected_behavior": "Referral-required items should pass/fail appropriately"
+    },
+    "location_constraints_test": {
+      "description": "Patients in different locations to test location-based rules",
+      "clinic": ["patient_001", "patient_005", "patient_006", "patient_008", "patient_010"],
+      "hospital": ["patient_002", "patient_007"],
+      "nursing_home": ["patient_003"],
+      "home": ["patient_004", "patient_009"],
+      "expected_behavior": "Location-specific items should validate correctly"
+    },
+    "provider_type_test": {
+      "description": "Different provider types to test specialty requirements",
+      "GP": ["patient_001", "patient_004", "patient_006", "patient_008"],
+      "Specialist": ["patient_002", "patient_007"],
+      "NP": ["patient_003", "patient_009"],
+      "Registrar": ["patient_005", "patient_010"],
+      "expected_behavior": "Specialty-required items should validate against provider type"
+    },
+    "mutual_exclusivity_test": {
+      "description": "Patients with multiple selected codes to test mutual exclusivity",
+      "patient_ids": ["patient_005", "patient_010"],
+      "expected_behavior": "Should warn about mutually exclusive code combinations"
+    }
+  },
+  "metadata": {
+    "created": "2024-01-15T00:00:00Z",
+    "description": "Test patient data for MBSPro rule engine testing",
+    "version": "1.0.0",
+    "notes": [
+      "All dates are in ISO 8601 format",
+      "last_claimed_items represents historical claims for frequency limit testing",
+      "selected_codes represents currently selected items for the consultation",
+      "Provider types: GP, Registrar, NP (Nurse Practitioner), Specialist",
+      "Locations: clinic, home, nursing_home, hospital",
+      "Hours buckets: business, after_hours, public_holiday"
+    ]
+  }
+}
