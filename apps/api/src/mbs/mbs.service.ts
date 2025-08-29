@@ -23,18 +23,21 @@ export class MbsCodesService {
     // 1) Extract entities/evidence
     const episode = this.extractor.extract(note);
 
-    // 2) Retrieve candidates (parallelize lexical + rag when enabled)
+    // 2) Retrieve candidates
     const topK = Math.max(1, Math.min(request.options?.top_k ?? 5, 20));
-    const useRag = String(process.env.RAG_ENABLED || '').toLowerCase() === 'true';
+    const retrievedLex = this.retriever.retrieve(note, topK * 3, episode);
 
-    const ragTask = (async () => {
-      if (!useRag) return { scores: null as Map<string, number> | null, used: false };
-      try {
+    // Optional: RAG + rerank (config-gated)
+    const useRag = String(process.env.RAG_ENABLED || '').toLowerCase() === 'true';
+    let ragScores: Map<string, number> | null = null;
+    let ragUsed = false;
+    try {
+      if (useRag) {
         const { RagService } = await import('../rag/rag.service');
         const rag = new RagService();
         const ragRes: any = await rag.queryRag(note, topK * 3);
         if (ragRes && Array.isArray(ragRes.results)) {
-          const scores = new Map<string, number>();
+          ragScores = new Map<string, number>();
           for (const r of ragRes.results) {
             const raw = r.match_score;
             if (raw === null || raw === undefined) continue;
@@ -44,18 +47,15 @@ export class MbsCodesService {
             s = Math.max(0, Math.min(1, s));
             const code = String(r.itemNum ?? r.ItemNum ?? '').trim();
             if (!code) continue;
-            const prev = scores.get(code);
-            if (prev === undefined || s > prev) scores.set(code, s);
+            const prev = ragScores.get(code);
+            if (prev === undefined || s > prev) ragScores.set(code, s);
           }
-          return { scores, used: scores.size > 0 };
+          ragUsed = ragScores.size > 0;
         }
-      } catch {}
-      return { scores: null as Map<string, number> | null, used: false };
-    })();
-
-    // lexical is synchronous CPU work; start ragTask first, then compute lexical
-    const retrievedLex = this.retriever.retrieve(note, topK * 3, episode);
-    const { scores: ragScores, used: ragUsed } = await ragTask;
+      }
+    } catch {
+      ragScores = null; ragUsed = false;
+    }
 
     // 3) Rule evaluation + scoring over union of lexical and rag candidates
     const bundle = this.loader.getBundle();
