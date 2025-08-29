@@ -8,6 +8,7 @@ import { useClaimDraft } from "@/store/useClaimDraft";
 import { runQuickRules } from "@/lib/quickRules";
 import { useSuggestResults } from "@/store/useSuggestResults";
 import { usePatientSelection } from "@/store/usePatientSelection";
+import SwapPanel from "@/components/SwapPanel";
 import {
   MicrophoneIcon,
   SparklesIcon,
@@ -66,6 +67,19 @@ export default function SuggestionsPage() {
   } = useSuggestResults();
   const [soapNotes, setSoapNotes] = useState("");
   const [suggestions, setSuggestions] = useState<SuggestCandidate[]>([]);
+  const replaceSuggestion = (oldCode: string, alt: any) => {
+    setSuggestions(prev => prev.map(s => s.code === oldCode ? {
+      code: String(alt.code),
+      title: String(alt.title),
+      score: Number(alt.score ?? s.score ?? 0),
+      score_breakdown: alt.score_breakdown || s.score_breakdown,
+      feature_hits: Array.isArray(alt.feature_hits) ? alt.feature_hits : s.feature_hits,
+      short_explain: s.short_explain,
+      rule_results: Array.isArray(alt.rule_results) ? alt.rule_results : s.rule_results,
+      compliance: alt.compliance || s.compliance,
+      confidence: typeof alt.confidence === 'number' ? alt.confidence : s.confidence,
+    } : s))
+  }
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -81,6 +95,7 @@ export default function SuggestionsPage() {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [recognition, setRecognition] = useState<any>(null);
+  const [swapFor, setSwapFor] = useState<{ code: string; title: string } | null>(null)
 
   // Initialize notes from draft and check for expired draft
   useEffect(() => {
@@ -211,17 +226,22 @@ export default function SuggestionsPage() {
         note: draft.notes || soapNotes,
       };
 
-      // Add patient context if available (optional)
+      // Add patient context if available (flattened to match DTO)
       if (selectedPatient) {
-        requestBody.context = {
-          last_claimed_items: selectedPatient.last_claimed_items,
-          provider_type: selectedPatient.provider_type,
-          location: selectedPatient.location,
-          referral_present: selectedPatient.referral_present,
-          consult_start: selectedPatient.consult_start,
-          consult_end: selectedPatient.consult_end,
-          hours_bucket: selectedPatient.hours_bucket,
-        };
+        if (selectedPatient.last_claimed_items)
+          requestBody.lastClaimedItems = selectedPatient.last_claimed_items;
+        if (selectedPatient.provider_type)
+          requestBody.providerType = selectedPatient.provider_type;
+        if (selectedPatient.location)
+          requestBody.location = selectedPatient.location;
+        if (typeof selectedPatient.referral_present === 'boolean')
+          requestBody.referralPresent = selectedPatient.referral_present;
+        if (selectedPatient.consult_start)
+          requestBody.consultStart = selectedPatient.consult_start;
+        if (selectedPatient.consult_end)
+          requestBody.consultEnd = selectedPatient.consult_end;
+        if (selectedPatient.hours_bucket)
+          requestBody.hoursBucket = selectedPatient.hours_bucket;
       }
 
       const res = await fetch(`${apiBase}/api/rules/validate-selection`, {
@@ -279,13 +299,7 @@ export default function SuggestionsPage() {
     }
   }, [draft.selected, selectedPatient]);
 
-  // Quick compliance status for UI
-  const quickStatus = useMemo(() => {
-    if (!draft.quickRules?.length) return null;
-    const hasFail = draft.quickRules.some((r) => r.status === "fail");
-    const hasWarn = draft.quickRules.some((r) => r.status === "warning");
-    return hasFail ? "red" : hasWarn ? "amber" : "green";
-  }, [draft.quickRules]);
+  // Quick compliance UI removed per request
 
   const sampleSOAP = `S: 45-year-old patient presents with chest pain and shortness of breath for 2 days. Pain is sharp, worse with deep breathing. No fever, no cough. History of hypertension.
 
@@ -334,6 +348,8 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
 
       const data: SuggestResponse = await response.json();
       setSuggestions(data.candidates || []);
+      // expose visible suggestion codes globally for SwapPanel filtering
+      try { (window as any).__suggestVisible = (data.candidates || []).map((c:any)=>String(c.code)); } catch {}
       setCandidates((data.candidates as any) || []);
       setNote(soapNotes.trim());
       setShowSuggestions(true);
@@ -533,8 +549,38 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
                               ?.filter((f) => !f.startsWith("Fee:"))
                               .join(", ")}
                           </p>
-                          {/* TODO: get description from actual code */}
-                          {/* <p className="text-gray-500 text-xs mt-2">{suggestion.short_explain}</p> */}
+                          {/* Mini rule badges */}
+                          {Array.isArray(suggestion.rule_results) && suggestion.rule_results.length > 0 && (
+                            <div className="mt-2 flex items-center gap-2 text-xs">
+                              {(() => {
+                                const fails = suggestion.rule_results!.filter((r: any) => r.status === 'fail').slice(0, 2)
+                                const warns = suggestion.rule_results!.filter((r: any) => r.status === 'warn').slice(0, 2)
+                                return (
+                                  <>
+                                    {fails.length > 0 && (
+                                      <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-800">
+                                        {`Fail ${fails.length}`}
+                                      </span>
+                                    )}
+                                    {warns.length > 0 && (
+                                      <span className="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800">
+                                        {`Warn ${warns.length}`}
+                                      </span>
+                                    )}
+                                    {(fails.length === 0 && warns.length === 0) && (
+                                      <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-800">OK</span>
+                                    )}
+                                  </>
+                                )
+                              })()}
+                              <span className="text-gray-500 truncate">
+                                {(() => {
+                                  const issues = suggestion.rule_results!.filter((r: any) => r.status !== 'pass').slice(0, 1)
+                                  return issues.length > 0 ? String(issues[0].reason || issues[0].id) : 'All checks passed'
+                                })()}
+                              </span>
+                            </div>
+                          )}
 
                           <div className="flex items-center space-x-4 mt-3 text-xs text-gray-500">
                             <div className="flex items-center">
@@ -578,7 +624,9 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
                             <CheckCircleIcon className="h-3 w-3 mr-1" />
                             Accept
                           </button>
-                          <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-3 py-1 rounded-md flex items-center">
+                          <button 
+                            onClick={() => setSwapFor({ code: suggestion.code, title: suggestion.title })}
+                            className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-3 py-1 rounded-md flex items-center">
                             <ArrowPathIcon className="h-3 w-3 mr-1" />
                             Swap
                           </button>
@@ -701,40 +749,7 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
                     </div>
                   </div>
 
-                  {/* Quick Compliance Check */}
-                  {draft.quickRules?.length > 0 && (
-                    <div
-                      className={`mt-4 p-3 rounded-lg border ${
-                        quickStatus === "green"
-                          ? "bg-green-50 border-green-200"
-                          : quickStatus === "amber"
-                          ? "bg-yellow-50 border-yellow-200"
-                          : "bg-red-50 border-red-200"
-                      }`}
-                    >
-                      <div className="text-sm font-medium text-gray-900 mb-2">
-                        Compliance (Quick Check)
-                      </div>
-                      <ul className="space-y-1 text-xs">
-                        {draft.quickRules.map((r) => (
-                          <li key={r.id} className="flex items-start">
-                            <span
-                              className={`mt-1 mr-2 inline-block w-2 h-2 rounded-full ${
-                                r.status === "ok"
-                                  ? "bg-green-500"
-                                  : r.status === "warning"
-                                  ? "bg-yellow-500"
-                                  : "bg-red-500"
-                              }`}
-                            />
-                            <span className="text-gray-700">
-                              {r.id} — {r.name}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                  {/* Quick Compliance Check removed per request */}
 
                   {selectionBlocked ? (
                     <button
@@ -773,6 +788,48 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
           </div>
         </div>
       </div>
+      {swapFor && (
+        <SwapPanel 
+          open={!!swapFor}
+          onClose={() => setSwapFor(null)}
+          code={swapFor.code}
+          title={swapFor.title}
+          note={soapNotes}
+          selectedCodes={draft.selected.map(i => i.code)}
+          onReplace={(alt, opts) => {
+            // Replace: remove target and optionally conflicting codes, then add alternative
+            const removeCodes = new Set<string>()
+            if (opts?.removeConflicts && alt.selection?.conflicts) {
+              alt.selection.conflicts.forEach((c: any) => {
+                removeCodes.add(String(c.code))
+                c.with.forEach((w: string) => removeCodes.add(String(w)))
+              })
+            }
+            removeCodes.add(swapFor.code)
+            const kept = draft.selected.filter((i) => !removeCodes.has(i.code))
+
+            // UI: replace in visible suggestions list
+            replaceSuggestion(swapFor.code, alt)
+
+            // Draft: remove and re-add only if this item was already selected
+            const wasSelected = draft.selected.some(i => i.code === swapFor.code)
+            if (wasSelected) {
+              Array.from(removeCodes).forEach((code) => removeItem(code))
+              const newItem = { code: alt.code, title: alt.title, fee: String(alt.fee ?? '0.00'), description: alt.title, score: 0 }
+              addItem(newItem as any)
+              const updatedItems = [...kept, newItem as any]
+              const results = runQuickRules({ notes: draft.notes || soapNotes, items: updatedItems })
+              setQuickRules(results)
+              validateSelection(updatedItems.map((i) => i.code))
+            } else {
+              // Still revalidate current selection to surface conflicts with others
+              validateSelection(draft.selected.map(i => i.code))
+            }
+
+            setSwapFor(null)
+          }}
+        />
+      )}
     </AppLayout>
   );
 }
