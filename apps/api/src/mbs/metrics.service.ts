@@ -86,9 +86,13 @@ export class MetricsService {
         }
       }
 
-      // 应用项目过滤 - 使用 PostgreSQL 的 JSONB 操作符
+      // 应用项目过滤 - 将在应用层面处理，避免数据库 JSONB 查询问题
+      let shouldFilterByItem = false;
+      let targetItemCode = null;
       if (filters.item && filters.item !== 'All') {
-        query = query.contains('items', [{ code: filters.item }]);
+        shouldFilterByItem = true;
+        targetItemCode = filters.item;
+        console.log('Will filter by item code after data retrieval:', targetItemCode);
       }
 
       const { data, error } = await query.limit(50000);
@@ -125,13 +129,29 @@ export class MetricsService {
           processedItems = [];
         }
 
-        return {
-          ...claim,
-          items: processedItems
-        };
-      }) || [];
+                 return {
+           ...claim,
+           items: processedItems
+         };
+       }) || [];
 
-      return processedData;
+       // 在应用层面应用 item 过滤
+       let finalData = processedData;
+       if (shouldFilterByItem && targetItemCode) {
+         finalData = processedData.filter(claim => {
+           if (!claim.items || !Array.isArray(claim.items)) {
+             return false;
+           }
+           
+           return claim.items.some(item => 
+             item && typeof item === 'object' && item.code === targetItemCode
+           );
+         });
+         
+         console.log(`Filtered ${processedData.length} claims to ${finalData.length} claims matching item ${targetItemCode}`);
+       }
+
+       return finalData;
     } catch (error) {
       console.error('Error getting claims data:', error);
       return null;
