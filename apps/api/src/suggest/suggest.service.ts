@@ -196,12 +196,10 @@ export class SuggestService {
         if (gamma && gamma !== 1)
           baseSim = Math.max(0, Math.min(1, Math.pow(baseSim, gamma)));
 
-        // v1 confidence (aligned with /mbs-codes):
-        // - hard gate: any fail => cap to 0.3
-        // - soft coverage: warn proportion reduces scale
-        // - evidence sufficiency heuristic from extracted signals
-        // - margin bonus for duration above threshold
-        // - conflict penalty already in penalties
+        // Improved confidence calculation v2:
+        // - Reduced hard penalties for better score distribution
+        // - Optimized evidence sufficiency baseline
+        // - Better balance between rules and base similarity
         const anyFail = ruleResults.some((r) => r.status === "fail");
         const warnCount = ruleResults.filter((r) => r.status === "warn").length;
         const softTotal = warnCount + (anyFail ? 1 : 0);
@@ -253,10 +251,10 @@ export class SuggestService {
           softTotal > 0
             ? Math.max(0, 1 - Math.min(warnMax, warnCount * warnDecay))
             : 1;
-        const evidenceBase = 0.8; // was 0.7
+        const evidenceBase = 0.85; // Increased baseline evidence sufficiency
         let evidenceSuff2 = evidenceBase;
         if (typeof signalsInternal.duration === "number") evidenceSuff2 += 0.08;
-        if (typeof signalsInternal.mode === "string") evidenceSuff2 += 0.06;
+        if (typeof signalsInternal.mode === "string") evidenceSuff2 += 0.07; // Slightly increased
         if (signalsInternal.afterHours) evidenceSuff2 += 0.06;
         evidenceSuff2 = Math.max(0, Math.min(1, evidenceSuff2));
         const penaltiesWeight = Number.isFinite(
@@ -264,20 +262,21 @@ export class SuggestService {
         )
           ? Number(process.env.SUGGEST_PENALTY_WEIGHT)
           : 0.8;
+        // Reduced multiplicative penalty to allow higher scores
         score =
           score *
-          (0.75 + 0.25 * sRuleSoft2) *
-          (0.75 + 0.25 * evidenceSuff2) *
+          (0.80 + 0.20 * sRuleSoft2) * // Increased base factor from 0.75 to 0.80
+          (0.80 + 0.20 * evidenceSuff2) * // Increased base factor from 0.75 to 0.80
           (1 - Math.max(0, Math.min(1, (penalties ?? 0) * penaltiesWeight)));
-        // sharper sigmoid and shifted center for larger separation
+        // Optimized sigmoid parameters for better confidence distribution
         const k = Number.isFinite(Number(process.env.SUGGEST_SIGMOID_K))
           ? Number(process.env.SUGGEST_SIGMOID_K)
-          : 4.5;
+          : 2.6; // Optimized for best score distribution
         const center = Number.isFinite(
           Number(process.env.SUGGEST_SIGMOID_CENTER)
         )
           ? Number(process.env.SUGGEST_SIGMOID_CENTER)
-          : 0.42;
+          : 0.15; // Optimized to allow ~90% max confidence
         const confidence = Math.max(
           0,
           Math.min(1, 1 / (1 + Math.exp(-k * (score - center))))

@@ -138,12 +138,14 @@ export class MbsCodesService {
     // Base score: normalized sim + bonus
     let score = Math.max(0, Math.min(1, baseSim + marginBonus));
 
-    // Rule gating and soft coverage
-    if (anyHardFail) score = Math.min(score, 0.3);
-    score = score * (0.7 + 0.3 * sRuleSoft) * (0.7 + 0.3 * evidenceSuff) * (1 - penaltyConflicts);
+    // Improved rule gating with reduced penalties
+    if (anyHardFail) score = Math.min(score, 0.4); // Increased from 0.3
+    score = score * (0.75 + 0.25 * sRuleSoft) * (0.75 + 0.25 * evidenceSuff) * (1 - penaltyConflicts);
 
-    // Map to confidence via logistic-like smoothing
-    const confidence = Math.max(0, Math.min(1, 1 / (1 + Math.exp(-4 * (score - 0.5)))));
+    // Optimized sigmoid parameters for better confidence distribution
+    const k = Number.isFinite(Number(process.env.MBS_SIGMOID_K)) ? Number(process.env.MBS_SIGMOID_K) : 2.6; // Optimized for best distribution
+    const center = Number.isFinite(Number(process.env.MBS_SIGMOID_CENTER)) ? Number(process.env.MBS_SIGMOID_CENTER) : 0.15; // Optimized for ~90% max confidence
+    const confidence = Math.max(0, Math.min(1, 1 / (1 + Math.exp(-k * (score - center)))));
 
     const reasoning = this.buildReasoning(item, ep, evals);
     const ev = ep.evidence.slice(0, 8);
