@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { usePatientSelection } from '@/store/usePatientSelection'
 
 interface Patient {
   id: string
@@ -17,11 +18,15 @@ interface Patient {
 }
 
 interface PatientSelectorProps {
-  onPatientChange: (patient: Patient) => void
-  selectedPatient: Patient | null
+  onPatientChange?: (patient: Patient | null) => void
+  selectedPatient?: Patient | null
 }
 
-export default function PatientSelector({ onPatientChange, selectedPatient }: PatientSelectorProps) {
+export default function PatientSelector({ onPatientChange, selectedPatient: propSelectedPatient }: PatientSelectorProps) {
+  // Use shared store if no props provided
+  const { selectedPatient: storeSelectedPatient, setSelectedPatient: setStoreSelectedPatient } = usePatientSelection()
+  const selectedPatient = propSelectedPatient ?? storeSelectedPatient
+  const handlePatientChange = onPatientChange ?? setStoreSelectedPatient
   const [patients, setPatients] = useState<Patient[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -45,11 +50,6 @@ export default function PatientSelector({ onPatientChange, selectedPatient }: Pa
       
       const data = await response.json()
       setPatients(data.patients || [])
-      
-      // Auto-select first patient if none selected
-      if (!selectedPatient && data.patients && data.patients.length > 0) {
-        onPatientChange(data.patients[0])
-      }
     } catch (err) {
       console.error('Error loading patients:', err)
       setError(err instanceof Error ? err.message : 'Failed to load patients')
@@ -59,7 +59,7 @@ export default function PatientSelector({ onPatientChange, selectedPatient }: Pa
   }
 
   const handlePatientSelect = (patient: Patient) => {
-    onPatientChange(patient)
+    handlePatientChange(patient)
     setEditingPatient(null)
     setIsEditing(false)
   }
@@ -71,7 +71,7 @@ export default function PatientSelector({ onPatientChange, selectedPatient }: Pa
 
   const handleSavePatient = () => {
     if (editingPatient) {
-      onPatientChange(editingPatient)
+      handlePatientChange(editingPatient)
       setEditingPatient(null)
       setIsEditing(false)
     }
@@ -203,13 +203,32 @@ export default function PatientSelector({ onPatientChange, selectedPatient }: Pa
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
           <h4 className="text-md font-medium text-gray-700">Available Patients</h4>
-          <button
-            onClick={loadPatients}
-            className="btn-secondary text-sm"
-          >
-            Refresh
-          </button>
+          <div className="flex space-x-2">
+            {selectedPatient && (
+              <button
+                onClick={() => handlePatientChange(null)}
+                className="btn-secondary text-sm"
+              >
+                Clear Selection
+              </button>
+            )}
+            <button
+              onClick={loadPatients}
+              className="btn-secondary text-sm"
+            >
+              Refresh
+            </button>
+          </div>
         </div>
+        
+        {!selectedPatient && (
+          <div className="mb-3 p-3 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+            <div className="text-center text-gray-600">
+              <div className="text-sm font-medium">No Patient Selected</div>
+              <div className="text-xs mt-1">Optional fields will not be populated for rule engine validation</div>
+            </div>
+          </div>
+        )}
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {patients.map((patient) => (

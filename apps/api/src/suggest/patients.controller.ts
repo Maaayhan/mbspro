@@ -7,7 +7,7 @@ export class PatientsController {
   @Get()
   getPatients() {
     try {
-      const patientsPath = join(process.cwd(), 'data', 'patient.json');
+      const patientsPath = join(process.cwd(), '..', '..', 'data', 'patient.json');
       const rawData = readFileSync(patientsPath, 'utf8');
       const data = JSON.parse(rawData);
       return data;
