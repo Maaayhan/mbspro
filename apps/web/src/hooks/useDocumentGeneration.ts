@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { GenerateDocRequest, GenerateDocResponse } from '@mbspro/shared';
+import type { GenerateDocRequest, GenerateDocResponse } from '../shared';
 
 interface UseDocumentGenerationOptions {
   onSuccess?: (document: GenerateDocResponse) => void;

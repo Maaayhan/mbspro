@@ -1,6 +1,6 @@
 import { IsString, IsOptional, IsNumber, Min, IsArray, IsBoolean, IsIn, IsISO8601 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import type { SuggestRequest } from '@mbspro/shared';
+import type { SuggestRequest } from '../../shared';
 
 export class SuggestRequestDto implements SuggestRequest {
   @ApiProperty({

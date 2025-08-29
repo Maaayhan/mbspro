@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
-import type { RuleResult } from '@mbspro/shared';
+import type { RuleResult } from '../shared';
 
 interface NoteFacts {
   mode: string;

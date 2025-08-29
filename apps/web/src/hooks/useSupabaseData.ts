@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { Patient, Practitioner } from '@mbspro/shared';
+import type { Patient, Practitioner } from '../shared';
 
 // Test patient interface for rule engine testing
 export interface TestPatient {

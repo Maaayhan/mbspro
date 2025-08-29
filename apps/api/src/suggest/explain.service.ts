@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import type { SuggestCandidate, Signals } from "@mbspro/shared";
+import type { SuggestCandidate, Signals } from "../shared";
 
 export type ExplainKey =
   | "telehealth"

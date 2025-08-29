@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import type { SuggestResponse, SuggestCandidate, Signals, RuleResult } from '@mbspro/shared';
+import type { SuggestResponse, SuggestCandidate, Signals, RuleResult } from '../../shared';
 
 export class SuggestCandidateDto implements SuggestCandidate {
   @ApiProperty({ description: 'MBS item code', example: '23' })

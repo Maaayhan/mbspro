@@ -1,0 +1,73 @@
+services:
+  # Backend API Service
+  - type: web
+    name: mbspro-api
+    runtime: node
+    plan: starter
+    buildCommand: cd apps/api && chmod +x build.sh && ./build.sh
+    startCommand: cd apps/api && npm run start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: API_PREFIX
+        value: api
+      - key: SWAGGER_ENABLED
+        value: "true"
+      - key: FRONTEND_URL
+        fromService:
+          type: web
+          name: mbspro-web
+          property: url
+      - key: SUGGEST_MODE
+        value: local
+      - key: LOG_LEVEL
+        value: info
+      # Database and external service vars (to be set in Render dashboard)
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      # Optional RAG service vars
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_CHAT_MODEL
+        value: gpt-4o-mini
+      - key: OPENAI_EMBED_MODEL
+        value: text-embedding-3-small
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: PINECONE_INDEX
+        value: mbspro-langchain-api
+      - key: COHERE_API_KEY
+        sync: false
+      - key: COHERE_RERANK_MODEL
+        value: rerank-english-v3.0
+      - key: RERANK_CANDIDATES
+        value: "60"
+      - key: RERANK_THRESHOLD
+        value: "0.0"
+      - key: INGEST_SECRET
+        sync: false
+
+  # Frontend Web Service
+  - type: web
+    name: mbspro-web
+    runtime: node
+    plan: starter
+    buildCommand: cd apps/web && chmod +x build.sh && ./build.sh
+    startCommand: cd apps/web && npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_BASE
+        fromService:
+          type: web
+          name: mbspro-api
+          property: url

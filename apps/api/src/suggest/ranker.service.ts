@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { SuggestCandidate } from '@mbspro/shared';
+import type { SuggestCandidate } from '../shared';
 import { ExtractedSignalsInternal } from './signal-extractor.service';
 
 export interface RankerWeights {

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { extractSignals, Signals } from '@mbspro/shared';
+import { extractSignals, Signals } from '../shared';
 
 export interface ExtractedSignalsInternal {
   mode: string;

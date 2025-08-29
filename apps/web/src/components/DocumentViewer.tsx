@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { XMarkIcon, DocumentDuplicateIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
-import type { GenerateDocResponse } from '@mbspro/shared';
+import type { GenerateDocResponse } from '../shared';
 
 interface DocumentViewerProps {
   document: GenerateDocResponse;

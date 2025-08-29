@@ -20,7 +20,7 @@ import {
   SparklesIcon,
   CodeBracketIcon,
 } from "@heroicons/react/24/outline";
-import type { GenerateDocResponse } from "@mbspro/shared";
+import type { GenerateDocResponse } from "../../shared";
 
 // Types
 interface ClaimItem {

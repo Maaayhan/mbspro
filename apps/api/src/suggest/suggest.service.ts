@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { SuggestRequestDto } from "./dto/suggest-request.dto";
 import { SuggestResponseDto } from "./dto/suggest-response.dto";
-import type { SuggestResponse, SuggestCandidate } from "@mbspro/shared";
+import type { SuggestResponse, SuggestCandidate } from "../shared";
 import { SignalExtractorService } from "./signal-extractor.service";
 import { RankerService } from "./ranker.service";
 import { ExplainService } from "./explain.service";
