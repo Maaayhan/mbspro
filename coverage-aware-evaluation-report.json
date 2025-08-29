@@ -1,9 +1,9 @@
 {
   "evaluation_summary": {
-    "timestamp": "2025-08-29T18:42:08.642Z",
+    "timestamp": "2025-08-29T19:17:44.554Z",
     "evaluation_type": "coverage_aware",
     "overall_status": {
-      "score": 0.6074300699300699,
+      "score": 0.6021270396270396,
       "grade": "D",
       "interpretation": "Coverage-aware evaluation reflects realistic performance within rule limitations"
     },
@@ -39,15 +39,15 @@
     },
     "metrics_evaluation": {
       "metadata": {
-        "evaluation_time_ms": 3,
+        "evaluation_time_ms": 5,
         "test_cases_count": 11,
-        "timestamp": "2025-08-29T18:42:08.640Z",
+        "timestamp": "2025-08-29T19:17:44.545Z",
         "options": {}
       },
       "precision_recall": {
         "precision": {
-          "mean": 0.5454545454545454,
-          "std": 0.29379877923735326,
+          "mean": 0.5151515151515151,
+          "std": 0.260676523243716,
           "values": [
             0.3333333333333333,
             0.3333333333333333,
@@ -58,7 +58,7 @@
             0.6666666666666666,
             0.6666666666666666,
             1,
-            1,
+            0.6666666666666666,
             0
           ]
         },
@@ -80,8 +80,8 @@
           ]
         },
         "f1": {
-          "mean": 0.6545454545454544,
-          "std": 0.2775334094995227,
+          "mean": 0.6363636363636362,
+          "std": 0.2603240193322973,
           "values": [
             0.5,
             0.5,
@@ -92,7 +92,7 @@
             0.8,
             0.8,
             1,
-            1,
+            0.8,
             0
           ]
         }
@@ -196,50 +196,50 @@
           {
             "confidence_range": "0-0.3",
             "name": "low",
-            "mean_confidence": 0.2650796716233894,
-            "accuracy": 1,
+            "mean_confidence": 0.25402361994852457,
+            "accuracy": 0,
             "sample_size": 1,
-            "calibration_error": 0.7349203283766106
+            "calibration_error": 0.25402361994852457
           },
           {
             "confidence_range": "0.3-0.7",
             "name": "medium",
-            "mean_confidence": 0.3444149062516293,
-            "accuracy": 0.5,
+            "mean_confidence": 0.3295840465881184,
+            "accuracy": 1,
             "sample_size": 2,
-            "calibration_error": 0.1555850937483707
+            "calibration_error": 0.6704159534118816
           },
           {
             "confidence_range": "0.7-1",
             "name": "high",
-            "mean_confidence": 0.8252594951316695,
+            "mean_confidence": 0.8202668162432821,
             "accuracy": 1,
             "sample_size": 8,
-            "calibration_error": 0.17474050486833048
+            "calibration_error": 0.17973318375671787
           }
         ],
-        "overall_calibration_error": 0.3550819756644373,
+        "overall_calibration_error": 0.36805758570570807,
         "is_well_calibrated": false
       },
       "performance": {
         "latency": {
-          "mean": 1068.8251045959134,
-          "median": 1043.715260499797,
-          "p95": 2156.765407678537,
-          "p99": 2156.765407678537,
-          "max": 2156.765407678537,
-          "min": 301.9045452240325
+          "mean": 1179.8584932602096,
+          "median": 1052.2589492825516,
+          "p95": 2302.5236851685745,
+          "p99": 2302.5236851685745,
+          "max": 2302.5236851685745,
+          "min": 560.1054641979945
         },
         "throughput": {
-          "requests_per_second": 0.9356067664391792,
+          "requests_per_second": 0.8475592672446499,
           "total_requests": 11,
-          "total_time_ms": 11757.076150555047
+          "total_time_ms": 12978.443425862304
         }
       },
       "overall_assessment": {
-        "overall_score": 0.48863636363636365,
+        "overall_score": 0.4810606060606061,
         "component_scores": {
-          "precision": 0.5454545454545454,
+          "precision": 0.5151515151515151,
           "recall": 0.9090909090909091,
           "rule_accuracy": 0,
           "calibration": 0.5,
@@ -294,7 +294,7 @@
     {
       "category": "Coverage-Aware Precision",
       "metric": "Top-3 Precision",
-      "value": "54.5%",
+      "value": "51.5%",
       "note": "Within available rule coverage"
     },
     {
@@ -325,7 +325,7 @@
     }
   ],
   "advisor_summary": {
-    "executive_summary": "Coverage-aware MBS evaluation completed with grade D (60.7%). Evaluation accounts for limited rule coverage of 260 codes.",
+    "executive_summary": "Coverage-aware MBS evaluation completed with grade D (60.2%). Evaluation accounts for limited rule coverage of 260 codes.",
     "testing_approach": "Realistic evaluation using only codes covered by rule engine. Tests designed within actual system limitations rather than unrealistic expectations.",
     "coverage_context": {
       "available_codes": 260,

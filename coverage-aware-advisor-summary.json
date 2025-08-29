@@ -1,7 +1,7 @@
 {
-  "timestamp": "2025-08-29T18:42:08.642Z",
+  "timestamp": "2025-08-29T19:17:44.554Z",
   "evaluation_type": "coverage_aware_realistic",
-  "overall_score": 0.6074300699300699,
+  "overall_score": 0.6021270396270396,
   "grade": "D",
   "available_codes": 260,
   "key_metrics": [
@@ -14,7 +14,7 @@
     {
       "category": "Coverage-Aware Precision",
       "metric": "Top-3 Precision",
-      "value": "54.5%",
+      "value": "51.5%",
       "note": "Within available rule coverage"
     },
     {
@@ -50,7 +50,7 @@
     }
   ],
   "advisor_summary": {
-    "executive_summary": "Coverage-aware MBS evaluation completed with grade D (60.7%). Evaluation accounts for limited rule coverage of 260 codes.",
+    "executive_summary": "Coverage-aware MBS evaluation completed with grade D (60.2%). Evaluation accounts for limited rule coverage of 260 codes.",
     "testing_approach": "Realistic evaluation using only codes covered by rule engine. Tests designed within actual system limitations rather than unrealistic expectations.",
     "coverage_context": {
       "available_codes": 260,
