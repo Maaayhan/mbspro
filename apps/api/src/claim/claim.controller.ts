@@ -53,4 +53,16 @@ export class ClaimController {
   async getPatientClaims(@Query("patientId") patientId: string) {
     return this.svc.getPatientClaims(patientId);
   }
+
+  @Get("providers")
+  @HttpCode(200)
+  async getProviders() {
+    return this.svc.getProviders();
+  }
+
+  @Get("items")
+  @HttpCode(200)
+  async getItems(@Query('top') top: string = '5') {
+    return this.svc.getTopItems(Number(top));
+  }
 }

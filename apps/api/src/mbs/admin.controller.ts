@@ -22,6 +22,12 @@ export class MbsAdminController {
   snapshot() {
     return this.metrics.snapshot();
   }
+
+  @Post('seed-claims')
+  async seedClaims() {
+    // This endpoint will seed some sample claims data
+    return this.loader.seedClaims();
+  }
 }
 
 

@@ -401,4 +401,144 @@ export class ClaimService {
       throw error;
     }
   }
+
+  /** Get all providers */
+  async getProviders() {
+    try {
+      const { data, error } = await this.supa.getClient()
+        .from('mbs_practitioners')
+        .select('provider_number, full_name')
+        .order('full_name');
+
+      if (error) {
+        console.error("Failed to get providers:", error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error("Failed to get providers:", error);
+      return [];
+    }
+  }
+
+  /** Get unique item codes from claims */
+  async getItems() {
+    try {
+      const { data, error } = await this.supa.getClient()
+        .from('claims')
+        .select('items')
+        .not('items', 'is', null);
+
+      if (error) {
+        console.error("Failed to get items:", error);
+        return [];
+      }
+
+      // Extract unique MBS codes from claims items
+      const itemCodes = new Set<string>();
+      data?.forEach(claim => {
+        if (claim.items && Array.isArray(claim.items)) {
+          claim.items.forEach((item: any) => {
+            if (item.code) {
+              itemCodes.add(item.code);
+            }
+          });
+        }
+      });
+
+      // Get MBS item details for these codes
+      const codes = Array.from(itemCodes);
+      if (codes.length === 0) {
+        return [];
+      }
+
+      const { data: mbsItems, error: mbsError } = await this.supa.getClient()
+        .from('mbs_items')
+        .select('code, title')
+        .in('code', codes)
+        .order('code');
+
+      if (mbsError) {
+        console.error("Failed to get MBS items:", mbsError);
+        return codes.map(code => ({ code, title: `Item ${code}` }));
+      }
+
+      return mbsItems || [];
+    } catch (error) {
+      console.error("Failed to get items:", error);
+      return [];
+    }
+  }
+
+  /** Get top MBS items from claims */
+  async getTopItems(top: number = 5) {
+    try {
+      // 直接从claims表中提取和聚合items
+      const { data, error } = await this.supa.getClient()
+        .from('claims')
+        .select('items')
+        .not('items', 'is', null);
+
+      if (error) {
+        console.error('Failed to get claims items:', error);
+        return [];
+      }
+
+      // 手动聚合和计算items
+      const itemStats: Record<string, { 
+        code: string; 
+        count: number; 
+        revenue: number; 
+        title?: string 
+      }> = {};
+
+      data.forEach(claim => {
+        if (claim.items && Array.isArray(claim.items)) {
+          claim.items.forEach((item: any) => {
+            const code = item.code;
+            const unitPrice = Number(item.unitPrice) || 0;
+
+            if (code && unitPrice > 0) {
+              if (!itemStats[code]) {
+                itemStats[code] = { 
+                  code, 
+                  count: 0, 
+                  revenue: 0 
+                };
+              }
+              
+              itemStats[code].count += 1;
+              itemStats[code].revenue += unitPrice;
+            }
+          });
+        }
+      });
+
+      // 转换为数组并排序
+      const sortedItems = Object.values(itemStats)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, top);
+
+      // 获取MBS项目的标题
+      const codes = sortedItems.map(item => item.code);
+      const { data: mbsItems } = await this.supa.getClient()
+        .from('mbs_items')
+        .select('code, title')
+        .in('code', codes);
+
+      // 合并标题
+      return sortedItems.map(item => {
+        const mbsItem = mbsItems?.find(m => m.code === item.code);
+        return {
+          ...item,
+          title: mbsItem?.title || `Item ${item.code}`
+        };
+      });
+
+    } catch (error) {
+      console.error('Error getting top items:', error);
+      return [];
+    }
+  }
 }
