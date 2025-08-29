@@ -17,10 +17,7 @@ services:
       - key: SWAGGER_ENABLED
         value: "true"
       - key: FRONTEND_URL
-        fromService:
-          type: web
-          name: mbspro-web
-          property: url
+        sync: false
       - key: SUGGEST_MODE
         value: local
       - key: LOG_LEVEL
@@ -67,7 +64,4 @@ services:
       - key: NODE_ENV
         value: production
       - key: NEXT_PUBLIC_API_BASE
-        fromService:
-          type: web
-          name: mbspro-api
-          property: url
+        sync: false
