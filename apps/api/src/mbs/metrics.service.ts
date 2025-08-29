@@ -105,7 +105,16 @@ export class MetricsService {
         try {
           // 如果 items 是字符串，尝试解析
           if (typeof claim.items === 'string') {
-            processedItems = JSON.parse(claim.items);
+            // 尝试解析 JSON，如果失败则尝试处理可能的不规范 JSON
+            try {
+              processedItems = JSON.parse(claim.items);
+            } catch {
+              // 如果是不规范的 JSON，尝试修复
+              const fixedJsonString = claim.items
+                .replace(/'/g, '"')  // 替换单引号为双引号
+                .replace(/([a-zA-Z0-9_]+):/g, '"$1":');  // 为键添加引号
+              processedItems = JSON.parse(fixedJsonString);
+            }
           }
           
           // 确保 processedItems 是数组
@@ -113,7 +122,6 @@ export class MetricsService {
             processedItems = [];
           }
         } catch (parseError) {
-          console.warn('Failed to parse items:', parseError);
           processedItems = [];
         }
 

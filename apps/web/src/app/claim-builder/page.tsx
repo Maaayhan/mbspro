@@ -10,6 +10,7 @@ import { useClaimDraft } from "@/store/useClaimDraft";
 import { usePatients, usePractitioners } from "@/hooks/useSupabaseData";
 import { useDocumentGeneration } from "@/hooks/useDocumentGeneration";
 import { usePatientSelection } from "@/store/usePatientSelection";
+import { useSuggestResults } from "@/store/useSuggestResults";
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
@@ -47,6 +48,7 @@ interface FhirPreview {
 
 export default function ClaimBuilderPage() {
   const { draft, clear } = useClaimDraft();
+  const { clearCandidates: clearSuggestions } = useSuggestResults();
   const [selectedPatient, setSelectedPatient] = useState("");
   const [selectedProvider, setSelectedProvider] = useState("");
   
@@ -231,10 +233,11 @@ export default function ClaimBuilderPage() {
         message: "Your Medicare claim has been submitted and is being processed.",
       });
 
-      // Clear draft after successful submission
+      // Clear draft and suggestions after successful submission
       setTimeout(() => {
-        clear();
-      }, 1000); // delay 1 second to show the success message
+        clear(); // This clears notes, selected items, and quick rules
+        clearSuggestions(); // This clears suggestion candidates
+      }, 500); // delay 0.5 second to show the success message
 
       return data;
     } catch (error) {

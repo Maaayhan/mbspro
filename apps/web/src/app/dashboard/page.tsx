@@ -129,18 +129,18 @@ export default function DashboardPage() {
 
     return {
       kpis: {
-        totalClaims: 1247,
-        errorRate: 0.023,
-        revenue: 82400,
-        complianceScore: 0.977,
+        totalClaims: 0,
+        errorRate: 0,
+        revenue: 0,
+        complianceScore: 0,
       },
       revenueTrend: [
-        { month: "Jan", value: 12400 },
-        { month: "Feb", value: 13800 },
-        { month: "Mar", value: 15200 },
-        { month: "Apr", value: 14600 },
-        { month: "May", value: 16800 },
-        { month: "Jun", value: 18200 },
+        { month: "Jan", value: 45835 },
+        { month: "Feb", value: 42265 },
+        { month: "Mar", value: 49519 },
+        { month: "Apr", value: 42858 },
+        { month: "May", value: 43388 },
+        { month: "Jun", value: 37244 },
       ],
       topItems: getTopItems(allItems, "revenue"), // 默认按收入取前5名
       auditRows: [

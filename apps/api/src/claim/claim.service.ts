@@ -156,7 +156,7 @@ export class ClaimService {
 
       try {
         const created = await this.supa.createClaim(claimData);
-        console.log('✅ Claim Successfully Stored in Supabase:', JSON.stringify(created, null, 2));
+        console.log('✅ Claim Successfully Stored in Supabase');
 
         return {
           claim: created,

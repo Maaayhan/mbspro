@@ -23,6 +23,8 @@ type SuggestResultsState = {
   setCandidates: (cs: SuggestCandidate[]) => void;
   setNote: (note: string) => void;
   getByCode: (code: string) => SuggestCandidate | undefined;
+  clearCandidates: () => void; // 只清空候选项，保留 note
+  clear: () => void; // 完全清空所有数据
 };
 
 export const useSuggestResults = create<SuggestResultsState>()(
@@ -34,6 +36,8 @@ export const useSuggestResults = create<SuggestResultsState>()(
       setCandidates: (cs) => set({ candidates: cs || [], updatedAt: Date.now() }),
       setNote: (note) => set({ note, updatedAt: Date.now() }),
       getByCode: (code) => (get().candidates || []).find(c => String(c.code) === String(code)),
+      clearCandidates: () => set({ candidates: [], updatedAt: Date.now() }),
+      clear: () => set({ candidates: [], note: undefined, updatedAt: undefined }),
     }),
     { name: 'mbspro-suggest-results' }
   )
