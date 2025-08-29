@@ -2,20 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { usePatientSelection } from '@/store/usePatientSelection'
+import { usePatients, type TestPatient } from '@/hooks/useSupabaseData'
 
-interface Patient {
-  id: string
-  name: string
-  age: number
-  provider_type: 'GP' | 'Registrar' | 'NP' | 'Specialist'
-  location: 'clinic' | 'home' | 'nursing_home' | 'hospital'
-  consult_start: string
-  consult_end: string
-  hours_bucket: 'business' | 'after_hours' | 'public_holiday'
-  referral_present: boolean
-  selected_codes: string[]
-  last_claimed_items: Array<{ code: string; at: string }>
-}
+// Use TestPatient interface from useSupabaseData
+type Patient = TestPatient
 
 interface PatientSelectorProps {
   onPatientChange?: (patient: Patient | null) => void
@@ -27,36 +17,9 @@ export default function PatientSelector({ onPatientChange, selectedPatient: prop
   const { selectedPatient: storeSelectedPatient, setSelectedPatient: setStoreSelectedPatient } = usePatientSelection()
   const selectedPatient = propSelectedPatient ?? storeSelectedPatient
   const handlePatientChange = onPatientChange ?? setStoreSelectedPatient
-  const [patients, setPatients] = useState<Patient[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { patients, loading, error } = usePatients()
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null)
   const [isEditing, setIsEditing] = useState(false)
-
-  useEffect(() => {
-    loadPatients()
-  }, [])
-
-  const loadPatients = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const apiBase = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000').replace(/\/$/, '')
-      const response = await fetch(`${apiBase}/api/patients`)
-      
-      if (!response.ok) {
-        throw new Error(`Failed to load patients: ${response.status}`)
-      }
-      
-      const data = await response.json()
-      setPatients(data.patients || [])
-    } catch (err) {
-      console.error('Error loading patients:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load patients')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handlePatientSelect = (patient: Patient) => {
     handlePatientChange(patient)
@@ -177,12 +140,7 @@ export default function PatientSelector({ onPatientChange, selectedPatient: prop
             <div className="ml-3">
               <h3 className="text-sm font-medium text-red-800">Error Loading Patients</h3>
               <div className="mt-1 text-sm text-red-700">{error}</div>
-              <button
-                onClick={loadPatients}
-                className="mt-2 text-sm text-red-600 hover:text-red-500 underline"
-              >
-                Try again
-              </button>
+
             </div>
           </div>
         </div>
@@ -212,12 +170,7 @@ export default function PatientSelector({ onPatientChange, selectedPatient: prop
                 Clear Selection
               </button>
             )}
-            <button
-              onClick={loadPatients}
-              className="btn-secondary text-sm"
-            >
-              Refresh
-            </button>
+
           </div>
         </div>
         

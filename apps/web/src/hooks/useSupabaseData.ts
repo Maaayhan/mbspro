@@ -3,73 +3,139 @@
 import { useState, useEffect } from 'react';
 import type { Patient, Practitioner } from '@mbspro/shared';
 
-// Note: In a real app, you would use Supabase client with anon key
-// For now, we'll use mock data that matches the expected structure
+// Test patient interface for rule engine testing
+export interface TestPatient {
+  id: string;
+  name: string;
+  age: number;
+  medicare_number?: string;
+  provider_type: 'GP' | 'Registrar' | 'NP' | 'Specialist';
+  location: 'clinic' | 'home' | 'nursing_home' | 'hospital';
+  consult_start: string;
+  consult_end: string;
+  hours_bucket: 'business' | 'after_hours' | 'public_holiday';
+  referral_present: boolean;
+  selected_codes: string[];
+  last_claimed_items: Array<{ code: string; at: string }>;
+}
 
-// Mock data matching database UUIDs - in production, replace with real Supabase queries
-const mockPatients: Patient[] = [
+// Essential test patients for rule engine scenarios
+const mockTestPatients: TestPatient[] = [
+  // Business hours GP consultation
   {
     id: '26c29bc9-ae3f-4e23-acc9-66a42188420f',
-    full_name: 'Olivia Brown',
-    gender: 'female',
-    dob: '1990-04-18',
+    name: 'Olivia Brown',
+    age: 34,
     medicare_number: '3012345678',
-    phone: '+61 3 9666 1234',
-    address: '50 Swanston St, Melbourne VIC 3000, AU'
+    provider_type: 'GP',
+    location: 'clinic',
+    consult_start: '2024-01-15T09:00:00Z',
+    consult_end: '2024-01-15T09:30:00Z',
+    hours_bucket: 'business',
+    referral_present: false,
+    selected_codes: ['23'],
+    last_claimed_items: [
+      { code: '23', at: '2024-01-10T14:30:00Z' }
+    ]
   },
+  // After-hours specialist with referral
   {
     id: 'a6afa436-e07e-4eb0-aa8b-ae43123b129c',
-    full_name: 'Liam Smith',
-    gender: 'male',
-    dob: '1982-09-05',
+    name: 'Liam Smith',
+    age: 42,
     medicare_number: '3012345679',
-    phone: '+61 3 9666 2345',
-    address: '200 Bourke St, Melbourne VIC 3000, AU'
+    provider_type: 'Specialist',
+    location: 'hospital',
+    consult_start: '2024-01-15T18:00:00Z',
+    consult_end: '2024-01-15T18:45:00Z',
+    hours_bucket: 'after_hours',
+    referral_present: true,
+    selected_codes: ['92479'],
+    last_claimed_items: [
+      { code: '92479', at: '2024-01-01T15:00:00Z' }
+    ]
   },
+  // Nursing home NP consultation
   {
     id: 'aeafbb88-22eb-4bd4-b751-1027e1d5ccb3',
-    full_name: 'Charlotte Wilson',
-    gender: 'female',
-    dob: '1975-11-22',
+    name: 'Charlotte Wilson',
+    age: 49,
     medicare_number: '3012345680',
-    phone: '+61 3 9666 3456',
-    address: '75 Lonsdale St, Melbourne VIC 3000, AU'
+    provider_type: 'NP',
+    location: 'nursing_home',
+    consult_start: '2024-01-15T11:00:00Z',
+    consult_end: '2024-01-15T11:20:00Z',
+    hours_bucket: 'business',
+    referral_present: false,
+    selected_codes: ['721'],
+    last_claimed_items: [
+      { code: '721', at: '2024-01-01T10:00:00Z' },
+      { code: '721', at: '2024-01-08T14:00:00Z' }
+    ]
   },
-  {
-    id: '3109d3f5-4381-4b37-bcc7-6a0e738d9620',
-    full_name: 'Ethan Taylor',
-    gender: 'male',
-    dob: '2015-06-10',
-    medicare_number: '3012345681',
-    phone: '+61 3 9666 4567',
-    address: '12 Flinders St, Melbourne VIC 3000, AU'
-  },
+  // Home visit after-hours
   {
     id: '39465d9a-6fec-4f20-81b3-9218a8195edf',
-    full_name: 'Margaret Harris',
-    gender: 'female',
-    dob: '1947-02-14',
+    name: 'Margaret Harris',
+    age: 77,
     medicare_number: '3012345682',
-    phone: '+61 3 9666 5678',
-    address: '88 Elizabeth St, Melbourne VIC 3000, AU'
+    provider_type: 'GP',
+    location: 'home',
+    consult_start: '2024-01-15T20:00:00Z',
+    consult_end: '2024-01-15T20:25:00Z',
+    hours_bucket: 'after_hours',
+    referral_present: false,
+    selected_codes: ['92121'],
+    last_claimed_items: []
   },
+  // Pediatric patient
+  {
+    id: '3109d3f5-4381-4b37-bcc7-6a0e738d9620',
+    name: 'Ethan Taylor',
+    age: 9,
+    medicare_number: '3012345681',
+    provider_type: 'GP',
+    location: 'clinic',
+    consult_start: '2024-01-15T16:00:00Z',
+    consult_end: '2024-01-15T16:15:00Z',
+    hours_bucket: 'business',
+    referral_present: false,
+    selected_codes: [],
+    last_claimed_items: []
+  },
+  // Registrar consultation
   {
     id: 'a500634a-3d30-4893-853e-2c43b3ef2b44',
-    full_name: 'Wei Zhang',
-    gender: 'male',
-    dob: '1980-11-30',
+    name: 'Wei Zhang',
+    age: 44,
     medicare_number: '3012345683',
-    phone: '+61 3 9666 6789',
-    address: '120 La Trobe St, Melbourne VIC 3000, AU'
+    provider_type: 'Registrar',
+    location: 'clinic',
+    consult_start: '2024-01-15T13:00:00Z',
+    consult_end: '2024-01-15T13:25:00Z',
+    hours_bucket: 'business',
+    referral_present: false,
+    selected_codes: [],
+    last_claimed_items: []
   },
+  // Frequency limit test case
   {
     id: 'f77f155e-e963-4ac3-9fa8-045ec7bc9b2d',
-    full_name: 'Sophie Clarke',
-    gender: 'female',
-    dob: '1996-07-12',
+    name: 'Sophie Clarke',
+    age: 28,
     medicare_number: '3012345684',
-    phone: '+61 3 9666 7890',
-    address: '15 Queen St, Melbourne VIC 3000, AU'
+    provider_type: 'Specialist',
+    location: 'clinic',
+    consult_start: '2024-01-15T10:00:00Z',
+    consult_end: '2024-01-15T10:15:00Z',
+    hours_bucket: 'business',
+    referral_present: true,
+    selected_codes: [],
+    last_claimed_items: [
+      { code: '91827', at: '2024-01-01T14:00:00Z' },
+      { code: '91827', at: '2024-01-08T16:00:00Z' },
+      { code: '91827', at: '2024-01-12T09:00:00Z' }
+    ]
   }
 ];
 
@@ -133,20 +199,16 @@ const mockPractitioners: Practitioner[] = [
 ];
 
 export function usePatients() {
-  const [patients, setPatients] = useState<Patient[]>([]);
+  const [patients, setPatients] = useState<TestPatient[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Simulate API call
     const fetchPatients = async () => {
       try {
         setLoading(true);
-        // In a real app, this would be:
-        // const { data, error } = await supabase.from('mbs_patients').select('id, full_name, gender, dob, medicare_number');
-        
-        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
-        setPatients(mockPatients);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        setPatients(mockTestPatients);
         setError(null);
       } catch (err) {
         setError('Failed to load patients');
@@ -161,6 +223,9 @@ export function usePatients() {
 
   return { patients, loading, error };
 }
+
+// Alias for backward compatibility
+export const useTestPatients = usePatients;
 
 export function usePractitioners() {
   const [practitioners, setPractitioners] = useState<Practitioner[]>([]);

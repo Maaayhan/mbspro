@@ -1,6 +1,6 @@
 # Patient Testing for MBSPro Rule Engine
 
-This document describes how to use the new patient testing functionality to test the rule engine service with realistic patient data.
+This document describes how to use the patient testing functionality to test the rule engine service with realistic patient data.
 
 ## Overview
 
@@ -12,72 +12,99 @@ The patient testing system allows you to:
 
 ## Components
 
-### 1. Patient Data (`/mbspro/data/patient.json`)
-Contains 10 test patients with diverse characteristics:
+### 1. Patient Data (`/mbspro/apps/web/src/hooks/useSupabaseData.ts`)
+Contains 7 essential test patients with diverse characteristics:
 - **Provider Types**: GP, Specialist, NP, Registrar
 - **Locations**: clinic, home, nursing_home, hospital
 - **Consultation Times**: business hours, after-hours
 - **Referral Status**: with/without referrals
 - **Selected Codes**: various MBS item combinations
 - **Last Claimed Items**: historical claims for frequency limit testing
+- **Medicare Numbers**: Valid Medicare numbers for claim processing
 
-### 2. Patient Selector Component (`/mbspro/apps/web/components/PatientSelector.tsx`)
+### 2. Patient Selector Component (`/mbspro/apps/web/src/components/PatientSelector.tsx`)
 React component that provides:
 - Patient selection interface
 - Patient context editing
 - Real-time patient data updates
 
-### 3. Patients API (`/mbspro/apps/api/src/suggest/patients.controller.ts`)
-REST endpoint that serves patient data from the JSON file.
+### 3. Patient Hooks (`/mbspro/apps/web/src/hooks/useSupabaseData.ts`)
+React hooks that provide patient data directly to components without API calls.
+
+## Test Patients
+
+The system includes 7 essential test patients:
+
+1. **Olivia Brown** (Medicare: 3012345678)
+   - 34yo GP, clinic, business hours
+   - Tests: Standard GP consultation, business hours validation
+
+2. **Liam Smith** (Medicare: 3012345679)
+   - 42yo Specialist, hospital, after-hours, with referral
+   - Tests: After-hours rules, specialist referral requirements
+
+3. **Charlotte Wilson** (Medicare: 3012345680)
+   - 49yo NP, nursing home, business hours
+   - Tests: Location-based rules, NP provider type, frequency limits
+
+4. **Margaret Harris** (Medicare: 3012345682)
+   - 77yo GP, home visit, after-hours
+   - Tests: Home visit rules, after-hours validation, elderly patient
+
+5. **Ethan Taylor** (Medicare: 3012345681)
+   - 9yo GP, clinic, business hours
+   - Tests: Pediatric patient rules, age-based restrictions
+
+6. **Wei Zhang** (Medicare: 3012345683)
+   - 44yo Registrar, clinic, business hours
+   - Tests: Registrar provider type validation
+
+7. **Sophie Clarke** (Medicare: 3012345684)
+   - 28yo Specialist, clinic, business hours, with referral
+   - Tests: Frequency limits (3x 91827 claims), specialist requirements
 
 ## Test Scenarios
 
-The patient data includes several test scenarios:
-
 ### Frequency Limit Testing
-- **Patient 006 (Lisa Davis)**: Has 3 claims of item "91827" (psychiatrist video attendance) in recent weeks
-- **Patient 007 (Robert Taylor)**: Has 3 claims of item "92479"
-- **Expected Behavior**: Should trigger frequency limit warnings/blocking for items with frequency rules
-- **Note**: Item 91827 has frequency limits (max 50 per calendar year) and requires Specialist + Referral + Video
+- **Sophie Clarke**: Has 3 claims of item "91827" (psychiatrist video attendance)
+- **Expected Behavior**: Should trigger frequency limit warnings for items with frequency rules
+- **Note**: Item 91827 has frequency limits and requires Specialist + Referral
 
 ### After-Hours Rules
-- **Patients**: 002, 004, 008 (after-hours consultations)
+- **Patients**: Liam Smith, Margaret Harris
 - **Expected Behavior**: Should pass after-hours validation for appropriate items
 
 ### Referral Requirements
-- **With Referral**: Patients 002, 005, 007, 010
-- **Without Referral**: Patients 001, 003, 004, 006, 008, 009
+- **With Referral**: Liam Smith, Sophie Clarke
+- **Without Referral**: Olivia Brown, Charlotte Wilson, Margaret Harris, Ethan Taylor, Wei Zhang
 - **Expected Behavior**: Referral-required items should pass/fail appropriately
 
 ### Location Constraints
-- **Clinic**: Patients 001, 005, 006, 008, 010
-- **Hospital**: Patients 002, 007
-- **Nursing Home**: Patient 003
-- **Home**: Patients 004, 009
+- **Clinic**: Olivia Brown, Ethan Taylor, Wei Zhang, Sophie Clarke
+- **Hospital**: Liam Smith
+- **Nursing Home**: Charlotte Wilson
+- **Home**: Margaret Harris
 - **Expected Behavior**: Location-specific items should validate correctly
 
 ### Provider Type Validation
-- **GP**: Patients 001, 004, 006, 008
-- **Specialist**: Patients 002, 007
-- **NP**: Patients 003, 009
-- **Registrar**: Patients 005, 010
+- **GP**: Olivia Brown, Margaret Harris, Ethan Taylor
+- **Specialist**: Liam Smith, Sophie Clarke
+- **NP**: Charlotte Wilson
+- **Registrar**: Wei Zhang
 - **Expected Behavior**: Specialty-required items should validate against provider type
 
-### Mutual Exclusivity
-- **Patients**: 005, 010 (multiple selected codes)
-- **Expected Behavior**: Should warn about mutually exclusive code combinations
+### Age-Based Rules
+- **Pediatric**: Ethan Taylor (9yo)
+- **Adult**: Olivia Brown (34yo), Liam Smith (42yo), Wei Zhang (44yo), Charlotte Wilson (49yo)
+- **Elderly**: Margaret Harris (77yo)
+- **Expected Behavior**: Age-restricted items should validate correctly
 
 ## Usage
 
 ### 1. Start the Application
 ```bash
-# Start the API server
-cd mbspro/apps/api
-npm run start:dev
-
-# Start the web application
-cd mbspro/apps/web
-npm run dev
+# Start both frontend and backend
+pnpm dev
 ```
 
 ### 2. Select a Patient
@@ -104,7 +131,7 @@ The patient context is automatically included in API calls:
 {
   note: "clinical notes...",
   topN: 5,
-  selectedCodes: ["23", "721"],
+  selectedCodes: ["23"],
   lastClaimedItems: [
     { code: "23", at: "2024-01-10T14:30:00Z" }
   ],
@@ -120,11 +147,10 @@ The patient context is automatically included in API calls:
 ## Testing the Rule Engine
 
 ### Frequency Limits
-1. **Use Patient 006 (Lisa Davis)**: Has 3 claims of item 91827 (psychiatrist video attendance)
-2. **Requirements**: Specialist provider, referral present, video consultation
+1. **Use Sophie Clarke**: Has 3 claims of item 91827 (psychiatrist video attendance)
+2. **Requirements**: Specialist provider, referral present
 3. **Expected**: Should show frequency limit warnings (3/50 used in calendar year)
-4. **Advanced testing**: Use the test script `node test-frequency-limits.js` for systematic testing
-5. **High frequency test**: Create 55+ claims to trigger frequency limit exceeded status
+4. **Advanced testing**: Edit patient to add more claims for testing higher frequencies
 
 ### Location Constraints
 Test location-specific items (e.g., hospital-only items) with patients in different locations.
@@ -138,8 +164,8 @@ Test referral-required items with patients who have/do not have referrals.
 ## Troubleshooting
 
 ### Patient Data Not Loading
-1. Check that `/mbspro/data/patient.json` exists
-2. Verify the API server is running
+1. Check that `useSupabaseData.ts` contains patient data
+2. Verify the React hooks are working correctly
 3. Check browser console for errors
 
 ### Rule Engine Not Using Patient Context
@@ -156,40 +182,38 @@ Test referral-required items with patients who have/do not have referrals.
 6. **Common items with frequency limits**: 91827, 91828, 91829, 91830, 91831, 91837, 91838, 91839, 92437
 7. **Note**: The rule engine uses `mbs_rules.normalized.json`, not `mbs_seed.json`
 
-### Test the Patient API
-```bash
-cd mbspro
-node test-patient-api.js
-```
+### Test the Patient Data
+1. Open browser developer tools
+2. Navigate to the suggestions page
+3. Check that patient selector loads 7 patients
+4. Verify patient context appears when selected
 
 ## Adding New Test Patients
 
 To add new test patients:
 
-1. Edit `/mbspro/data/patient.json`
-2. Add a new patient object with required fields
-3. Include relevant test scenarios in the `test_scenarios` section
-4. Restart the API server if needed
+1. Edit `/mbspro/apps/web/src/hooks/useSupabaseData.ts`
+2. Add a new patient object to `mockTestPatients` array
+3. Include required fields: id, name, age, medicare_number, provider_type, location, etc.
+4. Restart the development server
 
 ## Example Test Patient
 
-```json
+```typescript
 {
-  "id": "patient_011",
-  "name": "Test Patient",
-  "age": 35,
-  "provider_type": "GP",
-  "location": "clinic",
-  "consult_start": "2024-01-15T10:00:00Z",
-  "consult_end": "2024-01-15T10:30:00Z",
-  "hours_bucket": "business",
-  "referral_present": false,
-  "selected_codes": ["23"],
-  "last_claimed_items": [
-    {
-      "code": "23",
-      "at": "2024-01-01T10:00:00Z"
-    }
+  id: 'new-patient-uuid',
+  name: 'Test Patient',
+  age: 35,
+  medicare_number: '3012345685',
+  provider_type: 'GP',
+  location: 'clinic',
+  consult_start: '2024-01-15T10:00:00Z',
+  consult_end: '2024-01-15T10:30:00Z',
+  hours_bucket: 'business',
+  referral_present: false,
+  selected_codes: ['23'],
+  last_claimed_items: [
+    { code: '23', at: '2024-01-01T10:00:00Z' }
   ]
 }
 ```

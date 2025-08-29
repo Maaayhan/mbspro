@@ -5,7 +5,6 @@ import Link from "next/link";
 import AppLayout from "@/components/AppLayout";
 import DocumentViewer from "@/components/DocumentViewer";
 import Notification from "@/components/Notification";
-import PatientSelector from "@/components/PatientSelector";
 import { useClaimDraft } from "@/store/useClaimDraft";
 import { usePatients, usePractitioners } from "@/hooks/useSupabaseData";
 import { useDocumentGeneration } from "@/hooks/useDocumentGeneration";
@@ -597,9 +596,8 @@ export default function ClaimBuilderPage() {
                     </option>
                     {patients.map((patient) => (
                       <option key={patient.id} value={patient.id}>
-                        {patient.full_name}
-                        {patient.medicare_number &&
-                          ` (Medicare: ${patient.medicare_number})`}
+                        {patient.name} ({patient.age}yo)
+                        {patient.medicare_number && ` - Medicare: ${patient.medicare_number}`}
                       </option>
                     ))}
                   </select>
