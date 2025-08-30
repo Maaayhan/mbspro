@@ -1,0 +1,30 @@
+{
+  "configuration": "balanced",
+  "test_approach": "A/B Testing with Coverage-Aware Evaluation",
+  "metrics_to_track": [
+    "Top-3 Precision",
+    "Top-5 Precision",
+    "Recall Rate",
+    "F1 Score",
+    "Confidence Calibration Error",
+    "User Satisfaction (if available)"
+  ],
+  "test_cases": [
+    "Standard consultations (baseline performance)",
+    "Telehealth consultations (feature matching)",
+    "Chronic disease management (specialized codes)",
+    "Edge cases (low confidence scenarios)"
+  ],
+  "success_criteria": {
+    "precision_improvement": ">= 10%",
+    "recall_maintained": ">= current level",
+    "confidence_calibration": "< 15% error",
+    "latency_impact": "< 5% increase"
+  },
+  "rollback_triggers": [
+    "Precision decreases > 5%",
+    "Recall decreases > 10%",
+    "Latency increases > 20%",
+    "System errors increase"
+  ]
+}

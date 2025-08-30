@@ -1,0 +1,476 @@
+{
+  "evaluation_summary": {
+    "timestamp": "2025-08-29T18:29:18.364Z",
+    "overall_status": {
+      "score": 0.7207277526395173,
+      "grade": "C",
+      "components_passing": 0,
+      "total_components": 2
+    },
+    "components_evaluated": [
+      "Guardrail Tests (Unit Tests)",
+      "Synthetic Dataset Evaluation",
+      "Precision/Recall Metrics",
+      "Rule Accuracy Assessment",
+      "Confidence Calibration",
+      "Performance Metrics"
+    ]
+  },
+  "detailed_results": {
+    "guardrail_tests": {
+      "passed": 23,
+      "failed": 3,
+      "total": 26
+    },
+    "synthetic_evaluation": {
+      "rule_accuracy": {
+        "total_cases": 9,
+        "passed": 9,
+        "failed": 0,
+        "accuracy_by_rule": {
+          "duration_threshold": {
+            "passed": 1,
+            "total": 1,
+            "accuracy": 1
+          },
+          "extended_consultation": {
+            "passed": 1,
+            "total": 1,
+            "accuracy": 1
+          },
+          "insufficient_duration": {
+            "passed": 1,
+            "total": 1,
+            "accuracy": 1
+          },
+          "telehealth_eligibility": {
+            "passed": 1,
+            "total": 1,
+            "accuracy": 1
+          },
+          "after_hours_eligibility": {
+            "passed": 1,
+            "total": 1,
+            "accuracy": 1
+          },
+          "referral_requirement": {
+            "passed": 1,
+            "total": 1,
+            "accuracy": 1
+          },
+          "hospital_location_requirement": {
+            "passed": 1,
+            "total": 1,
+            "accuracy": 1
+          },
+          "clinic_location": {
+            "passed": 1,
+            "total": 1,
+            "accuracy": 1
+          },
+          "mutual_exclusion_detection": {
+            "passed": 1,
+            "total": 1,
+            "accuracy": 1
+          }
+        },
+        "details": [
+          {
+            "test_id": "dur_001",
+            "test_focus": "duration_threshold",
+            "passed": true,
+            "issues": [],
+            "score": 0,
+            "top3_precision": 0.6666666666666666
+          },
+          {
+            "test_id": "dur_002",
+            "test_focus": "extended_consultation",
+            "passed": true,
+            "issues": [],
+            "score": 0,
+            "top3_precision": 0.6666666666666666
+          },
+          {
+            "test_id": "dur_003",
+            "test_focus": "insufficient_duration",
+            "passed": true,
+            "issues": [],
+            "score": 0
+          },
+          {
+            "test_id": "elig_001",
+            "test_focus": "telehealth_eligibility",
+            "passed": true,
+            "issues": [],
+            "score": 0,
+            "top3_precision": 0.6666666666666666
+          },
+          {
+            "test_id": "elig_002",
+            "test_focus": "after_hours_eligibility",
+            "passed": true,
+            "issues": [],
+            "score": 0,
+            "top3_precision": 0.6666666666666666
+          },
+          {
+            "test_id": "elig_003",
+            "test_focus": "referral_requirement",
+            "passed": true,
+            "issues": [],
+            "score": 0,
+            "top3_precision": 0.3333333333333333
+          },
+          {
+            "test_id": "loc_001",
+            "test_focus": "hospital_location_requirement",
+            "passed": true,
+            "issues": [],
+            "score": 0,
+            "top3_precision": 0.6666666666666666
+          },
+          {
+            "test_id": "loc_002",
+            "test_focus": "clinic_location",
+            "passed": true,
+            "issues": [],
+            "score": 0,
+            "top3_precision": 0.6666666666666666
+          },
+          {
+            "test_id": "excl_001",
+            "test_focus": "mutual_exclusion_detection",
+            "passed": true,
+            "issues": [],
+            "score": 0
+          }
+        ],
+        "overall_accuracy": 1
+      },
+      "confidence_calibration": {
+        "high_confidence_accuracy": null,
+        "medium_confidence_accuracy": null,
+        "low_confidence_accuracy": 0,
+        "calibration_score": 0
+      },
+      "total_synthetic_cases": 18,
+      "evaluation_timestamp": "2025-08-29T18:29:18.361Z"
+    },
+    "metrics_evaluation": {
+      "metadata": {
+        "evaluation_time_ms": 1,
+        "test_cases_count": 15,
+        "timestamp": "2025-08-29T18:29:18.364Z",
+        "options": {}
+      },
+      "precision_recall": {
+        "precision": {
+          "mean": 0.37254901960784315,
+          "std": 0.37716439336610486,
+          "values": [
+            0.6666666666666666,
+            0.6666666666666666,
+            0,
+            0.6666666666666666,
+            0.6666666666666666,
+            0.3333333333333333,
+            0.6666666666666666,
+            0.6666666666666666,
+            0,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "recall": {
+          "mean": 0.5294117647058824,
+          "std": 0.4991341984846218,
+          "values": [
+            1,
+            1,
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "f1": {
+          "mean": 0.4294117647058823,
+          "std": 0.4169422387451611,
+          "values": [
+            0.8,
+            0.8,
+            0,
+            0.8,
+            0.8,
+            0.5,
+            0.8,
+            0.8,
+            0,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "rule_accuracy": {
+        "overall_accuracy": 1,
+        "details": {
+          "correct_rules_fired": 8,
+          "incorrect_rules_fired": 0,
+          "missed_rules": 0,
+          "total_cases": 15,
+          "by_rule_type": {
+            "duration_threshold": {
+              "correct": 1,
+              "total": 1
+            },
+            "extended_consultation": {
+              "correct": 1,
+              "total": 1
+            },
+            "insufficient_duration": {
+              "correct": 1,
+              "total": 1
+            },
+            "telehealth_eligibility": {
+              "correct": 1,
+              "total": 1
+            },
+            "after_hours_eligibility": {
+              "correct": 1,
+              "total": 1
+            },
+            "referral_requirement": {
+              "correct": 1,
+              "total": 1
+            },
+            "hospital_location_requirement": {
+              "correct": 1,
+              "total": 1
+            },
+            "clinic_location": {
+              "correct": 1,
+              "total": 1
+            },
+            "mutual_exclusion_detection": {
+              "correct": 1,
+              "total": 1
+            },
+            "confidence": {
+              "correct": 6,
+              "total": 6
+            }
+          }
+        },
+        "by_rule_type": [
+          {
+            "rule_type": "duration_threshold",
+            "accuracy": 1,
+            "sample_size": 1
+          },
+          {
+            "rule_type": "extended_consultation",
+            "accuracy": 1,
+            "sample_size": 1
+          },
+          {
+            "rule_type": "insufficient_duration",
+            "accuracy": 1,
+            "sample_size": 1
+          },
+          {
+            "rule_type": "telehealth_eligibility",
+            "accuracy": 1,
+            "sample_size": 1
+          },
+          {
+            "rule_type": "after_hours_eligibility",
+            "accuracy": 1,
+            "sample_size": 1
+          },
+          {
+            "rule_type": "referral_requirement",
+            "accuracy": 1,
+            "sample_size": 1
+          },
+          {
+            "rule_type": "hospital_location_requirement",
+            "accuracy": 1,
+            "sample_size": 1
+          },
+          {
+            "rule_type": "clinic_location",
+            "accuracy": 1,
+            "sample_size": 1
+          },
+          {
+            "rule_type": "mutual_exclusion_detection",
+            "accuracy": 1,
+            "sample_size": 1
+          },
+          {
+            "rule_type": "confidence",
+            "accuracy": 1,
+            "sample_size": 6
+          }
+        ]
+      },
+      "confidence_calibration": {
+        "by_confidence_range": [
+          {
+            "confidence_range": "0-0.3",
+            "name": "low",
+            "mean_confidence": 0.27932590194817064,
+            "accuracy": 0,
+            "sample_size": 1,
+            "calibration_error": 0.27932590194817064
+          },
+          {
+            "confidence_range": "0.3-0.7",
+            "name": "medium",
+            "mean_confidence": 0.4961894010128515,
+            "accuracy": 0.3333333333333333,
+            "sample_size": 6,
+            "calibration_error": 0.1628560676795182
+          },
+          {
+            "confidence_range": "0.7-1",
+            "name": "high",
+            "mean_confidence": 0.8738663188010928,
+            "accuracy": 0.875,
+            "sample_size": 8,
+            "calibration_error": 0.0011336811989072215
+          }
+        ],
+        "overall_calibration_error": 0.14777188360886537,
+        "is_well_calibrated": false
+      },
+      "performance": {
+        "latency": {
+          "mean": 1800.7459855365066,
+          "median": 1652.5877478473735,
+          "p95": 4810.117019801539,
+          "p99": 4810.117019801539,
+          "max": 4810.117019801539,
+          "min": 1308.1810621044
+        },
+        "throughput": {
+          "requests_per_second": 0.555325408487341,
+          "total_requests": 17,
+          "total_time_ms": 30612.68175412061
+        }
+      },
+      "overall_assessment": {
+        "overall_score": 0.6504901960784314,
+        "component_scores": {
+          "precision": 0.37254901960784315,
+          "recall": 0.5294117647058824,
+          "rule_accuracy": 1,
+          "calibration": 0.5,
+          "performance": 1
+        },
+        "weights": {
+          "precision": 0.25,
+          "recall": 0.25,
+          "rule_accuracy": 0.3,
+          "calibration": 0.15,
+          "performance": 0.05
+        },
+        "grade": "D"
+      }
+    }
+  },
+  "key_findings": [
+    {
+      "category": "Unit Tests",
+      "metric": "Pass Rate",
+      "value": "23/26",
+      "percentage": "88.5%"
+    },
+    {
+      "category": "Precision",
+      "metric": "Top-3 Precision",
+      "value": "37.3%",
+      "percentage": "37.3%"
+    },
+    {
+      "category": "Rule Accuracy",
+      "metric": "Overall Accuracy",
+      "value": "100.0%",
+      "percentage": "100.0%"
+    },
+    {
+      "category": "Performance",
+      "metric": "Median Latency",
+      "value": "1652.5877478473735ms",
+      "percentage": "✅ Good"
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "area": "Unit Tests",
+      "issue": "3 guardrail tests failed",
+      "action": "Fix failing unit tests before proceeding with integration"
+    },
+    {
+      "priority": "HIGH",
+      "area": "precision",
+      "issue": "precision score below acceptable threshold",
+      "action": "Improve precision implementation and tuning"
+    },
+    {
+      "priority": "MEDIUM",
+      "area": "recall",
+      "issue": "recall score below acceptable threshold",
+      "action": "Improve recall implementation and tuning"
+    },
+    {
+      "priority": "MEDIUM",
+      "area": "calibration",
+      "issue": "calibration score below acceptable threshold",
+      "action": "Improve calibration implementation and tuning"
+    }
+  ],
+  "action_items": [
+    "⚠️  WARNING: System needs improvements before deployment",
+    "Fix all failing unit tests",
+    "Improve code ranking precision"
+  ],
+  "advisor_summary": {
+    "executive_summary": "MBS coding system evaluation completed with overall grade C (72.1%). System shows 0/2 components passing acceptance criteria.",
+    "testing_approach": "Comprehensive evaluation using synthetic datasets, unit tests, and precision/recall metrics. No gold standard data required - evaluation based on rule consistency and expected behaviors.",
+    "key_strengths": [
+      "Good response time performance"
+    ],
+    "key_concerns": [
+      "3 unit tests failing",
+      "Low precision in code recommendations"
+    ],
+    "readiness_assessment": "NEEDS_IMPROVEMENT",
+    "confidence_in_results": "HIGH - evaluation covers rule accuracy, performance, and calibration using synthetic data designed to test system boundaries"
+  }
+}
