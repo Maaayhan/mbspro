@@ -61,9 +61,7 @@ export default function SuggestionsPage() {
     useClaimDraft();
   const {
     setCandidates,
-    setNote,
     candidates: storedCandidates,
-    note: storedNote,
   } = useSuggestResults();
   const [soapNotes, setSoapNotes] = useState("");
   const [suggestions, setSuggestions] = useState<SuggestCandidate[]>([]);
@@ -111,7 +109,7 @@ export default function SuggestionsPage() {
     }
   }, [draft.meta?.updatedAt, clear, hasClearedNotes]);
 
-  // Restore suggestions from persisted store when returning from explain page
+  // restore persistent AI suggestions
   useEffect(() => {
     if (
       (!showSuggestions || suggestions.length === 0) &&
@@ -121,10 +119,7 @@ export default function SuggestionsPage() {
       setSuggestions(storedCandidates as any);
       setShowSuggestions(true);
     }
-    if (!soapNotes && storedNote && !hasClearedNotes) {
-      setSoapNotes(storedNote);
-    }
-  }, [storedCandidates, storedNote, hasClearedNotes]);
+  }, [storedCandidates]);
 
   // Initialize speech recognition
   useEffect(() => {
@@ -351,7 +346,6 @@ P: Order ECG, chest X-ray. Prescribe anti-inflammatory. Follow up in 1 week if s
       // expose visible suggestion codes globally for SwapPanel filtering
       try { (window as any).__suggestVisible = (data.candidates || []).map((c:any)=>String(c.code)); } catch {}
       setCandidates((data.candidates as any) || []);
-      setNote(soapNotes.trim());
       setShowSuggestions(true);
     } catch (err: any) {
       console.error("Error getting suggestions:", err);

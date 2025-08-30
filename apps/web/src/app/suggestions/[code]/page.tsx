@@ -13,7 +13,7 @@ function toPercent(v?: number) {
 }
 
 export default function SuggestExplainPage({ params }: { params: { code: string } }) {
-  const { getByCode, note } = useSuggestResults()
+  const { getByCode } = useSuggestResults()
   const { addItem } = useClaimDraft()
   const candidate = getByCode(decodeURIComponent(params.code))
   const router = useRouter()
@@ -125,14 +125,7 @@ export default function SuggestExplainPage({ params }: { params: { code: string 
           <Link href="/suggestions" className="text-primary-600 hover:text-primary-700">← Back</Link>
         </div>
 
-        {note && (
-          <div className="card">
-            <div className="text-sm font-medium text-gray-900 mb-2">Clinical Notes (read‑only)</div>
-            <div className="bg-gray-50 rounded p-3 text-sm text-gray-800 whitespace-pre-wrap">
-              {note}
-            </div>
-          </div>
-        )}
+
 
         {!candidate ? (
           <div className="card">No explanation available. Please re-run suggestions.</div>
