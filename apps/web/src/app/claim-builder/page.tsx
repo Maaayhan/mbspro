@@ -10,6 +10,7 @@ import { usePatients, usePractitioners } from "@/hooks/useSupabaseData";
 import { useDocumentGeneration } from "@/hooks/useDocumentGeneration";
 import { usePatientSelection } from "@/store/usePatientSelection";
 import { useSuggestResults } from "@/store/useSuggestResults";
+import { useClaimBuilderSelections } from "@/store/useClaimBuilderSelections";
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
@@ -48,8 +49,15 @@ interface FhirPreview {
 export default function ClaimBuilderPage() {
   const { draft, clear } = useClaimDraft();
   const { clearCandidates: clearSuggestions } = useSuggestResults();
-  const [selectedPatient, setSelectedPatient] = useState("");
-  const [selectedProvider, setSelectedProvider] = useState("");
+  
+  // use persistent selections
+  const { 
+    selectedPatientId, 
+    selectedProviderId, 
+    setSelectedPatient, 
+    setSelectedProvider,
+    clear: clearSelections
+  } = useClaimBuilderSelections();
   
   // Get shared patient selection from suggestions page
   const { selectedPatient: sharedPatient } = usePatientSelection();
@@ -169,7 +177,7 @@ export default function ClaimBuilderPage() {
 
   const handleSubmitClaim = async () => {
     // 验证必填字段
-    if (!selectedPatient || !selectedProvider) {
+    if (!selectedPatientId || !selectedProviderId) {
       setNotification({
         isOpen: true,
         type: "warning",
@@ -197,8 +205,8 @@ export default function ClaimBuilderPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          patientId: selectedPatient,
-          practitionerId: selectedProvider,
+          patientId: selectedPatientId,
+          practitionerId: selectedProviderId,
           encounterId: `enc-${Date.now()}`,
           selected: claimItems.map((item) => ({
             code: item.code,
@@ -232,10 +240,11 @@ export default function ClaimBuilderPage() {
         message: "Your Medicare claim has been submitted and is being processed.",
       });
 
-      // Clear draft and suggestions after successful submission
+      // Clear draft, suggestions, and selections after successful submission
       setTimeout(() => {
         clear(); // This clears notes, selected items, and quick rules
         clearSuggestions(); // This clears suggestion candidates
+        clearSelections(); // This clears patient and provider selections
       }, 500); // delay 0.5 second to show the success message
 
       return data;
@@ -257,7 +266,7 @@ export default function ClaimBuilderPage() {
 
   // Function to fetch FHIR data from API
   const fetchFhirData = async () => {
-    if (!selectedPatient || !selectedProvider) {
+    if (!selectedPatientId || !selectedProviderId) {
       setFhirError("Please select a patient and provider");
       setNotification({
         isOpen: true,
@@ -291,8 +300,8 @@ export default function ClaimBuilderPage() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            patientId: selectedPatient,
-            practitionerId: selectedProvider,
+            patientId: selectedPatientId,
+            practitionerId: selectedProviderId,
             encounterId: `enc-${Date.now()}`,
             selected: claimItems.map((item) => ({
               code: item.code,
@@ -345,13 +354,13 @@ export default function ClaimBuilderPage() {
 
   // Fetch FHIR data when dependencies change
   useEffect(() => {
-    if (selectedPatient && selectedProvider && claimItems.length > 0) {
+    if (selectedPatientId && selectedProviderId && claimItems.length > 0) {
       fetchFhirData();
     } else {
       // Clear FHIR data when dependencies are missing
       setFhirData(null);
     }
-  }, [selectedPatient, selectedProvider, draft.selected.length]);
+  }, [selectedPatientId, selectedProviderId, draft.selected.length]);
 
   const generateJSON = () => {
     return JSON.stringify(
@@ -451,7 +460,7 @@ export default function ClaimBuilderPage() {
   };
 
   const handleGenerateDocument = async (docType: "referral" | "care_plan") => {
-    if (!selectedPatient || !selectedProvider) {
+    if (!selectedPatientId || !selectedProviderId) {
       setNotification({
         isOpen: true,
         type: "warning",
@@ -488,8 +497,8 @@ export default function ClaimBuilderPage() {
     try {
       await generateDocument({
         docType,
-        patientId: selectedPatient,
-        practitionerId: selectedProvider,
+        patientId: selectedPatientId,
+        practitionerId: selectedProviderId,
         clinicalNotes: draft.notes,
         selectedItems: draft.selected.map((item) => ({
           code: item.code,
@@ -659,7 +668,7 @@ export default function ClaimBuilderPage() {
                     Patient
                   </label>
                   <select
-                    value={selectedPatient}
+                    value={selectedPatientId}
                     onChange={(e) => setSelectedPatient(e.target.value)}
                     disabled={patientsLoading}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -683,7 +692,7 @@ export default function ClaimBuilderPage() {
                     Provider
                   </label>
                   <select
-                    value={selectedProvider}
+                    value={selectedProviderId}
                     onChange={(e) => setSelectedProvider(e.target.value)}
                     disabled={practitionersLoading}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -945,7 +954,7 @@ export default function ClaimBuilderPage() {
                   <div className="text-center text-gray-500 py-8">
                     <DocumentTextIcon className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                     <p className="text-sm">
-                      {!selectedPatient || !selectedProvider
+                      {!selectedPatientId || !selectedProviderId
                         ? "Please select a patient and provider to see FHIR preview"
                         : claimItems.length === 0
                         ? "Please select MBS items to see FHIR preview"
