@@ -1,21 +1,61 @@
+# Dependencies
 node_modules
-npm-debug.log
-.git
-.gitignore
-README.md
+*/node_modules
+
+# Build outputs
+dist
+build
+.next
+out
+
+# Environment files
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.next
-dist
-coverage
-.nyc_output
-.DS_Store
+.env.*.local
+
+# Git
+.git
+.gitignore
+
+# Logs
+logs
 *.log
+
+# Coverage
+coverage
+
+# IDE
 .vscode
 .idea
 *.swp
 *.swo
-*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+
+# Documentation
+README.md
+docs/
+
+# Tests
+**/*.test.js
+**/*.test.ts
+**/*.spec.js
+**/*.spec.ts
+test/
+tests/
+
+# Package manager files
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Cache
+.cache
+.nyc_output

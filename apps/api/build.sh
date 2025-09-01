@@ -24,4 +24,9 @@ echo "🔨 Building API..."
 cd ../../apps/api
 pnpm run build
 
+# Verify build output
+echo "🔍 Checking build output..."
+ls -la dist/
+echo "📁 Current directory: $(pwd)"
+
 echo "✅ Build completed successfully!"
