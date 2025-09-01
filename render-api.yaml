@@ -7,7 +7,7 @@ services:
     buildCommand: |
       chmod +x build-render.sh && ./build-render.sh
     startCommand: |
-      pnpm start
+      node dist/apps/api/src/main.js
     envVars:
       - key: NODE_ENV
         value: production
