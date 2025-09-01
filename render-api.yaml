@@ -5,7 +5,7 @@ services:
     env: node
     plan: starter
     buildCommand: |
-      chmod +x build-render.sh && ./build-render.sh
+      chmod +x build-debug.sh && ./build-debug.sh
     startCommand: |
       node dist/apps/api/src/main.js
     envVars:
