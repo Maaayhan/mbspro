@@ -25,9 +25,13 @@ if [ -d "dist" ]; then
     echo "📁 Dist directory contents:"
     ls -la dist/
     echo "📁 Main file exists:"
-    ls -la dist/main*
+    find dist -name "main.js" -type f
+    echo "📁 All JS files:"
+    find dist -name "*.js" | head -5
 else
     echo "❌ Dist directory not found!"
+    echo "📁 Current directory contents:"
+    ls -la
 fi
 
 echo "✅ Simple build completed!"

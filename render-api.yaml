@@ -5,7 +5,7 @@ services:
     env: node
     plan: starter
     buildCommand: |
-      chmod +x build-simple.sh && ./build-simple.sh
+      chmod +x build-render.sh && ./build-render.sh
     startCommand: |
       pnpm start
     envVars:
