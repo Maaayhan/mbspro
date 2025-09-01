@@ -1,0 +1,32 @@
+services:
+  # Backend API Service Only
+  - type: web
+    name: mbspro-api
+    env: node
+    plan: starter
+    buildCommand: |
+      npm install -g pnpm
+      pnpm install
+      cd packages/shared && pnpm run build
+      cd ../../apps/api && pnpm run build
+    startCommand: |
+      cd apps/api && pnpm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: COHERE_API_KEY
+        sync: false

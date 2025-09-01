@@ -1,0 +1,24 @@
+services:
+  # Frontend Web Service Only
+  - type: web
+    name: mbspro-web
+    env: node
+    plan: starter
+    buildCommand: |
+      npm install -g pnpm
+      pnpm install
+      cd packages/shared && pnpm run build
+      cd ../../apps/web && pnpm run build
+    startCommand: |
+      cd apps/web && pnpm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10001
+      - key: NEXT_PUBLIC_API_URL
+        value: https://mbspro-api.onrender.com
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false

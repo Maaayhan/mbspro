@@ -5,14 +5,27 @@ MBSPro是一个包含Next.js前端和NestJS后端的monorepo项目。本指南�
 
 ## 部署选项
 
-### 选项1: 使用render.yaml (推荐)
+### 选项1: 分别部署服务 (推荐)
+由于monorepo的复杂性，建议分别部署API和Web服务：
+
+1. **先部署API服务**：
+   - 使用 `render-api.yaml` 文件
+   - 在Render中创建新的Web服务
+   - 上传 `render-api.yaml` 文件
+
+2. **再部署Web服务**：
+   - 使用 `render-web.yaml` 文件
+   - 在Render中创建新的Web服务
+   - 上传 `render-web.yaml` 文件
+
+### 选项2: 使用完整render.yaml
 1. 将代码推送到GitHub
 2. 在Render中连接GitHub仓库
 3. 选择"Blueprint"部署方式
 4. 上传render.yaml文件
 5. Render将自动创建所有服务
 
-### 选项2: 手动创建服务
+### 选项3: 手动创建服务
 分别创建API、Web和数据库服务
 
 ## 环境变量配置

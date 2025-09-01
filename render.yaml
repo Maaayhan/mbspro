@@ -5,13 +5,12 @@ services:
     env: node
     plan: starter
     buildCommand: |
-      cd apps/api
-      npm install -g @nestjs/cli
-      npm install
-      npm run build
+      npm install -g pnpm
+      pnpm install
+      cd packages/shared && pnpm run build
+      cd ../../apps/api && pnpm run build
     startCommand: |
-      cd apps/api
-      npm start
+      cd apps/api && pnpm start
     envVars:
       - key: NODE_ENV
         value: production
@@ -38,12 +37,12 @@ services:
     env: node
     plan: starter
     buildCommand: |
-      cd apps/web
-      npm install
-      npm run build
+      npm install -g pnpm
+      pnpm install
+      cd packages/shared && pnpm run build
+      cd ../../apps/web && pnpm run build
     startCommand: |
-      cd apps/web
-      npm start
+      cd apps/web && pnpm start
     envVars:
       - key: NODE_ENV
         value: production
