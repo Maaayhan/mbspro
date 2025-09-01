@@ -5,12 +5,9 @@ services:
     env: node
     plan: starter
     buildCommand: |
-      npm install -g pnpm
-      pnpm install
-      cd packages/shared && pnpm run build
-      cd ../../apps/api && pnpm run build
+      chmod +x build.sh && ./build.sh
     startCommand: |
-      cd apps/api && pnpm start
+      pnpm start
     envVars:
       - key: NODE_ENV
         value: production
