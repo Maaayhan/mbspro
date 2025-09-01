@@ -1,0 +1,38 @@
+# Render 环境变量配置模板
+# 复制这些变量到 Render Dashboard 中配置
+
+# ============================================
+# API 服务环境变量
+# ============================================
+
+NODE_ENV=production
+PORT=4000
+API_PREFIX=api
+SWAGGER_ENABLED=true
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_ANON_KEY=your_anon_key_here
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
+DATABASE_URL=postgresql://postgres:your_password@db.your-project-id.supabase.co:5432/postgres?sslmode=require
+PGSSLMODE=require
+FRONTEND_URL=https://mbspro-web.onrender.com
+
+# ============================================
+# Web 服务环境变量
+# ============================================
+
+NODE_ENV=production
+NEXT_PUBLIC_API_BASE=https://mbspro-api.onrender.com
+
+# ============================================
+# 获取 Supabase 配置的步骤：
+# ============================================
+# 1. 访问 https://supabase.com/dashboard
+# 2. 选择你的项目
+# 3. 进入 Settings > API
+# 4. 复制以下值：
+#    - Project URL → SUPABASE_URL
+#    - anon public → SUPABASE_ANON_KEY  
+#    - service_role secret → SUPABASE_SERVICE_ROLE_KEY
+# 5. 进入 Settings > Database
+# 6. 复制 Connection string (URI) → DATABASE_URL
+# 7. 确保连接字符串包含 ?sslmode=require

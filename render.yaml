@@ -1,0 +1,48 @@
+services:
+  # Backend API Service
+  - type: web
+    name: mbspro-api
+    env: node
+    plan: free
+    buildCommand: cd apps/api && npm install -g pnpm && pnpm install --frozen-lockfile && pnpm build
+    startCommand: cd apps/api && pnpm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: API_PREFIX
+        value: api
+      - key: SWAGGER_ENABLED
+        value: true
+      - key: FRONTEND_URL
+        fromService:
+          type: web
+          name: mbspro-web
+          property: host
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: PGSSLMODE
+        value: require
+
+  # Frontend Web Service
+  - type: web
+    name: mbspro-web
+    env: node
+    plan: free
+    buildCommand: cd apps/web && npm install -g pnpm && pnpm install --frozen-lockfile && pnpm build
+    startCommand: cd apps/web && pnpm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_BASE
+        fromService:
+          type: web
+          name: mbspro-api
+          property: host
