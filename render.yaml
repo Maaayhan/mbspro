@@ -4,8 +4,8 @@ services:
     name: mbspro-api
     env: node
     plan: free
-    buildCommand: cd apps/api && npm install -g pnpm && pnpm install --frozen-lockfile && pnpm build
-    startCommand: cd apps/api && pnpm start
+    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm --filter @mbspro/api build
+    startCommand: cd apps/api/dist/apps/api/src && node main.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -36,7 +36,7 @@ services:
     name: mbspro-web
     env: node
     plan: free
-    buildCommand: cd apps/web && npm install -g pnpm && pnpm install --frozen-lockfile && pnpm build
+    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm --filter @mbspro/web build
     startCommand: cd apps/web && pnpm start
     envVars:
       - key: NODE_ENV

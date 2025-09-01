@@ -19,8 +19,14 @@ RUN pnpm install --frozen-lockfile
 COPY apps/web ./apps/web
 COPY packages/shared ./packages/shared
 
-# Build the application
+# Build the application from root directory
 RUN pnpm --filter @mbspro/web build
+
+# Create a simpler directory structure for production
+RUN mkdir -p /app/dist && \
+    cp -r apps/web/.next /app/dist/.next && \
+    cp -r apps/web/public /app/dist/public && \
+    cp -r apps/web/package.json /app/dist/
 
 # Expose port
 EXPOSE 3000

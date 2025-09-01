@@ -19,11 +19,16 @@ RUN pnpm install --frozen-lockfile
 COPY apps/api ./apps/api
 COPY packages/shared ./packages/shared
 
-# Build the application
+# Build the application from root directory
 RUN pnpm --filter @mbspro/api build
+
+# Create a simpler directory structure for production
+RUN mkdir -p /app/dist && \
+    cp -r dist/apps/api/src/* /app/dist/ && \
+    cp -r dist/packages/shared/src/* /app/dist/shared/
 
 # Expose port
 EXPOSE 4000
 
 # Start the application
-CMD ["pnpm", "--filter", "@mbspro/api", "start"]
+CMD ["node", "dist/main.js"]
