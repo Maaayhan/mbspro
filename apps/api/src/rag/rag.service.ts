@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ChatOpenAI, OpenAIEmbeddings } from '@langchain/openai';
+import { MistralAIEmbeddings } from '@langchain/mistralai';
 import { CohereClient } from 'cohere-ai';
 import { Pinecone } from '@pinecone-database/pinecone';
 import { PineconeStore } from '@langchain/pinecone';
@@ -15,22 +16,40 @@ export class RagService {
   private pinecone?: Pinecone;
   private pineconeIndex: any;
   private vectorStore?: PineconeStore;
-  private embeddings?: OpenAIEmbeddings;
+  private embeddings?: MistralAIEmbeddings | OpenAIEmbeddings;
   private cohere?: CohereClient | null;
 
   async initIfNeeded(): Promise<void> {
     if (this.vectorStore) return;
 
     const indexName = process.env.PINECONE_INDEX || 'mbspro-langchain-api';
-    const embedModel = process.env.OPENAI_EMBED_MODEL || 'text-embedding-3-small';
+    const embedProvider = process.env.EMBED_PROVIDER || 'mistral'; // mistral or openai
+    const embedModel = embedProvider === 'mistral' 
+      ? process.env.MISTRAL_EMBED_MODEL || 'mistral-embed'
+      : process.env.OPENAI_EMBED_MODEL || 'text-embedding-3-small';
 
     if (!process.env.PINECONE_API_KEY) {
       throw new Error('Missing PINECONE_API_KEY');
     }
 
+    // Initialize embeddings based on provider
+    if (embedProvider === 'mistral') {
+      if (!process.env.MISTRAL_API_KEY) {
+        throw new Error('Missing MISTRAL_API_KEY');
+      }
+      this.embeddings = new MistralAIEmbeddings({
+        apiKey: process.env.MISTRAL_API_KEY,
+        model: embedModel,
+      });
+    } else {
+      if (!process.env.OPENAI_API_KEY) {
+        throw new Error('Missing OPENAI_API_KEY');
+      }
+      this.embeddings = new OpenAIEmbeddings({ model: embedModel });
+    }
+
     this.pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
     this.pineconeIndex = this.pinecone.Index(indexName);
-    this.embeddings = new OpenAIEmbeddings({ model: embedModel });
     this.vectorStore = new PineconeStore(this.embeddings, {
       pineconeIndex: this.pineconeIndex,
       namespace: 'default',
@@ -38,7 +57,7 @@ export class RagService {
 
     this.cohere = process.env.COHERE_API_KEY ? new CohereClient({ token: process.env.COHERE_API_KEY }) : null;
     this.logger.log(
-      `RAG init: pinecone index=${indexName}, embedModel=${embedModel}, cohere=${this.cohere ? 'on' : 'off'}`
+      `RAG init: pinecone index=${indexName}, embedProvider=${embedProvider}, embedModel=${embedModel}, cohere=${this.cohere ? 'on' : 'off'}`
     );
   }
 
@@ -65,21 +84,71 @@ export class RagService {
       throw new Error(`Data file not found: ${DATA_FILE}`);
     }
 
+    this.logger.log(`Starting ingestion from: ${DATA_FILE}`);
     const raw = fs.readFileSync(DATA_FILE, 'utf-8');
     const data = JSON.parse(raw);
     if (!Array.isArray(data)) throw new Error('JSON file must contain an array');
 
+    this.logger.log(`Processing ${data.length} items...`);
+
     const docs: Document[] = data.map((item: any, idx: number) => {
-      const content = item.text || JSON.stringify(item);
-      return { pageContent: content, metadata: { ...item, _id: item.id || String(idx) } } as Document;
+      // Create searchable content for MBS items
+      let content = '';
+      
+      if (item.ItemNum) {
+        // This is an MBS item
+        content = `MBS Item ${item.ItemNum}\n`;
+        content += `Description: ${item.Description || ''}\n`;
+        content += `Category: ${item.Category || ''}\n`;
+        content += `Group: ${item.Group || ''}\n`;
+        content += `Schedule Fee: ${item.ScheduleFee || 'Not specified'}\n`;
+        
+        if (item.ItemStartDate) content += `Start Date: ${item.ItemStartDate}\n`;
+        if (item.ItemEndDate) content += `End Date: ${item.ItemEndDate}\n`;
+      } else {
+        // Fallback for other data formats
+        content = item.text || JSON.stringify(item);
+      }
+
+      const metadata = {
+        ...item,
+        _id: item.ItemNum || item.id || String(idx),
+        _type: 'mbs_item'
+      };
+
+      return { pageContent: content, metadata } as Document;
     });
 
-    const splitter = new CharacterTextSplitter({ chunkSize: 1000, chunkOverlap: 200 });
-    const chunks = await splitter.splitDocuments(docs as any);
-    await PineconeStore.fromDocuments(chunks, this.embeddings!, {
-      pineconeIndex: this.pineconeIndex,
-      namespace: 'default',
+    this.logger.log(`Created ${docs.length} documents, starting embedding...`);
+
+    // Use larger chunks for MBS items since they're already structured
+    const splitter = new CharacterTextSplitter({ 
+      chunkSize: 2000, 
+      chunkOverlap: 100,
+      separator: '\n'
     });
+    
+    const chunks = await splitter.splitDocuments(docs as any);
+    this.logger.log(`Split into ${chunks.length} chunks, uploading to Pinecone...`);
+
+    // Process in batches to avoid rate limits
+    const batchSize = 100;
+    let totalProcessed = 0;
+    
+    for (let i = 0; i < chunks.length; i += batchSize) {
+      const batch = chunks.slice(i, i + batchSize);
+      await PineconeStore.fromDocuments(batch, this.embeddings!, {
+        pineconeIndex: this.pineconeIndex,
+        namespace: 'default',
+      });
+      totalProcessed += batch.length;
+      this.logger.log(`Processed ${totalProcessed}/${chunks.length} chunks`);
+      
+      // Small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    this.logger.log(`Ingestion complete: ${chunks.length} chunks stored in Pinecone`);
     return { chunks: chunks.length };
   }
 
