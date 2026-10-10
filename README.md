@@ -2,6 +2,27 @@
 
 A modern monorepo application built with Next.js frontend, NestJS backend, and Supabase database.
 
+## My contribution (@Maaayhan)
+
+This is a fork of a 5-person hackathon team repository. The parts I built:
+
+- **Agentic RAG with a bounded verify-retry loop** — branch [`agentic-rag-langgraph`](../../tree/agentic-rag-langgraph).
+  A LangGraph `StateGraph` (`apps/api/src/rag/services/agent-graph.service.ts`):
+  `extract_facts → propose → verify → (critic → refine_propose → verify)`, stopping when enough
+  verified items are found or after 2 iterations, with a non-graph fallback path.
+  Rule verification (time window, age, modality, setting; PASS / SOFT / FAIL) is in
+  `verify.service.ts`. The API exposes it as `mode=deep` on `/api/suggest`, and the web UI has a Quick / Deep switch.
+- **Retrieval stack pieces** — Pinecone + Mistral embeddings + Cohere rerank wiring and the
+  ingest / query / infra service split (part of `apps/api/src/rag/`, shared with a teammate).
+- **Structured document generation** — referral letters and care plans via OpenAI + JSON Schema
+  (`apps/api/src/doc-generator/`).
+- **Metrics and audit-log service** (`apps/api/src/mbs/metrics.service.ts`) and the dashboard,
+  claim-builder and suggestions pages in `apps/web/`.
+
+Not mine: the rule engine (`apps/api/src/suggest/rule-engine.service.ts`) and most of the
+original suggestion ranking. The `self-reflection` branch continues from my RAG branch with a
+teammate's work-in-progress.
+
 ## Architecture
 
 - **Frontend**: Next.js with App Router (TypeScript)
