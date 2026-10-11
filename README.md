@@ -19,10 +19,6 @@ This is a fork of a 5-person hackathon team repository. The parts I built:
 - **Metrics and audit-log service** (`apps/api/src/mbs/metrics.service.ts`) and the dashboard,
   claim-builder and suggestions pages in `apps/web/`.
 
-Not mine: the rule engine (`apps/api/src/suggest/rule-engine.service.ts`) and most of the
-original suggestion ranking. The `self-reflection` branch continues from my RAG branch with a
-teammate's work-in-progress.
-
 ## Architecture
 
 - **Frontend**: Next.js with App Router (TypeScript)
